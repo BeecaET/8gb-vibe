@@ -126,7 +126,10 @@ struct AboutPage: View {
                 Text("Một sản phẩm của").font(.callout).foregroundStyle(.secondary)
                 if let logo = Product.logoBeeca {
                     Link(destination: Product.companyPage) {
-                        Image(nsImage: logo).resizable().interpolation(.high).aspectRatio(contentMode: .fit).frame(height: 64)
+                        // Yellow and green logo: always on a black tile so it reads in light and dark mode.
+                        Image(nsImage: logo).resizable().interpolation(.high).aspectRatio(contentMode: .fit).frame(height: 56)
+                            .padding(10)
+                            .background(Color.black, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
                     .help("beeca.vn")
                     .accessibilityLabel("BEECA, mở beeca.vn")

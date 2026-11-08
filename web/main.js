@@ -25,7 +25,8 @@
   document.documentElement.classList.add('js');
   var chap = document.querySelector('.man-chap');
   if (chap) requestAnimationFrame(function () { setTimeout(function () { chap.classList.add('mo'); }, 120); });
-  var chon = 'section h2, .o, .dong-ram, .buoc-lon li, .buoc-cai li, .khoi-ram span';
+  // Màn hẹp: chỉ cho tiêu đề và dòng bảng hiện dần, tránh khoảng trống khi cuộn nhanh
+  var chon = window.innerWidth > 860 ? 'section h2, .o, .dong-ram, .buoc-lon li, .buoc-cai li, .khoi-ram span' : 'section h2, .dong-ram';
   var cac = Array.prototype.slice.call(document.querySelectorAll(chon)).filter(function (e) { return !e.closest('.hero'); });
   var nhom = new Map();
   cac.forEach(function (e) {

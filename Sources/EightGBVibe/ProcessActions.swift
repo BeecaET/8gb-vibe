@@ -74,9 +74,8 @@ enum ProcessActions {
     static func quitAll(_ u: QuitCandidate) {
         guard u.blockedReason == nil else { return }
         switch u.quitMethod {
-        case let .app(identity, _):
-            guard identity.canStop() else { return }
-            NSRunningApplication(processIdentifier: identity.pid)?.terminate()
+        case let .app(identity, _, others):
+            for i in [identity] + others where i.canStop() { NSRunningApplication(processIdentifier: i.pid)?.terminate() }
         case let .simulator(app):
             runCommand("/usr/bin/xcrun", ["simctl", "shutdown", "all"])
             if let app, app.canStop() { NSRunningApplication(processIdentifier: app.pid)?.terminate() }
@@ -89,9 +88,8 @@ enum ProcessActions {
     static func forceQuit(_ u: QuitCandidate) {
         guard u.blockedReason == nil else { return }
         switch u.quitMethod {
-        case let .app(identity, _):
-            guard identity.canStop() else { return }
-            NSRunningApplication(processIdentifier: identity.pid)?.forceTerminate()
+        case let .app(identity, _, others):
+            for i in [identity] + others where i.canStop() { NSRunningApplication(processIdentifier: i.pid)?.forceTerminate() }
         case let .simulator(app):
             if let app, app.canStop() { NSRunningApplication(processIdentifier: app.pid)?.forceTerminate() }
         case let .processes(items):
@@ -102,8 +100,8 @@ enum ProcessActions {
     /// Whether it is still running. For Simulator: any device still booted or the app still open.
     static func isRunning(_ u: QuitCandidate) -> Bool {
         switch u.quitMethod {
-        case let .app(identity, _):
-            return identity.isSameProcess()
+        case let .app(identity, _, others):
+            return ([identity] + others).contains { $0.isSameProcess() }
         case let .simulator(app):
             if let app, app.isSameProcess() { return true }
             return runCommand("/usr/bin/xcrun", ["simctl", "list", "devices", "booted"]).contains("(Booted)")

@@ -76,6 +76,8 @@ public struct AppUsage: Identifiable, Sendable, Hashable {
     public var lastActive: Date
     /// Identity of the app's main process, used to quit exactly this app.
     public var identity: ProcessIdentity? = nil
+    /// Main processes of further running copies of the same bundle (one row for all of them, RAM counted once).
+    public var otherInstances: [ProcessIdentity] = []
 }
 
 public struct ProcessSnapshot: Sendable {
@@ -217,17 +219,26 @@ public final class ProcessAnalyzer: @unchecked Sendable {
             }
         }
         var appList: [AppUsage] = []
-        for a in apps {
-            let items = byApp[a.bundlePath] ?? []
+        // One row per bundle: an app running twice (Chrome with two profiles) has two NSRunningApplications with the
+        // same bundle path. Its processes were counted once per copy, giving two identical rows with doubled RAM.
+        // The frontmost copy (else the earliest pid) stands for the app; the others are quit together with it.
+        var copies: [String: [RunningApp]] = [:]
+        for a in apps { copies[a.bundlePath, default: []].append(a) }
+        let byPIDAll = Dictionary(list.map { ($0.pid, $0) }, uniquingKeysWith: { a, _ in a })
+        for (path, group) in copies {
+            let ordered = group.sorted { ($0.isFrontmost ? 0 : 1, $0.pid) < ($1.isFrontmost ? 0 : 1, $1.pid) }
+            let a = ordered[0]
+            let others = ordered.dropFirst().compactMap { byPIDAll[$0.pid].map(ProcessIdentity.init) }
+            let items = byApp[path] ?? []
             let c = items.reduce(0.0) { $0 + (cpu[$1.pid] ?? 0) }
             let id = "app:\(a.bundlePath)"
             alive.insert(id)
             let last = updateActivity(id, active: c >= activityThreshold || a.isFrontmost, now: now)
             appList.append(AppUsage(app: a, footprint: items.reduce(0) { $0 + ($1.footprint ?? 0) }, cpu: c,
                                      processCount: items.count, startDate: items.map(\.startDate).min() ?? now, lastActive: last,
-                                     identity: items.first { $0.pid == a.pid }.map(ProcessIdentity.init)))
+                                     identity: items.first { $0.pid == a.pid }.map(ProcessIdentity.init), otherInstances: others))
         }
-        appList.sort { $0.footprint > $1.footprint }
+        appList.sort { $0.footprint != $1.footprint ? $0.footprint > $1.footprint : $0.app.bundlePath < $1.app.bundlePath }
 
         var devKeys: Set<String> = []
         let byPIDForDev = byPID

@@ -387,17 +387,24 @@ struct LogPage: View {
 
 /// Tells SwiftUI whether the window holding this view is visible or hidden (closed, minimized, fully covered).
 struct VisibilityTracker: NSViewRepresentable {
+    /// false for the menu bar panel: a shown panel counts as visible even if macOS never reports its occlusion state.
+    var requireUnoccluded = true
     var changed: (Bool) -> Void
 
-    func makeNSView(context: Context) -> NSView { V(changed: changed) }
+    func makeNSView(context: Context) -> NSView { V(requireUnoccluded: requireUnoccluded, changed: changed) }
     func updateNSView(_ nsView: NSView, context: Context) {}
 
     final class V: NSView {
         let changed: (Bool) -> Void
+        let requireUnoccluded: Bool
         private var observers: [NSObjectProtocol] = []
         private var current: Bool?
+        /// Safety net: notifications alone left the menu bar panel blank on some Macs (Apple silicon and Intel).
+        /// A cheap 1-second check of the window flag fixes any missed notice.
+        private var poll: Timer?
 
-        init(changed: @escaping (Bool) -> Void) {
+        init(requireUnoccluded: Bool, changed: @escaping (Bool) -> Void) {
+            self.requireUnoccluded = requireUnoccluded
             self.changed = changed
             super.init(frame: .zero)
         }
@@ -407,7 +414,7 @@ struct VisibilityTracker: NSViewRepresentable {
             super.viewDidMoveToWindow()
             observers.forEach(NotificationCenter.default.removeObserver)
             observers = []
-            guard let w = window else { report(false); return }
+            guard let w = window else { poll?.invalidate(); poll = nil; report(false); return }
             let nc = NotificationCenter.default
             // Occlusion alone was not enough: under heavy swap, or right after the Dock icon policy changes, the menu bar
             // panel could open without an occlusion notice and stay blank. Key and order changes are watched too, and the
@@ -427,10 +434,19 @@ struct VisibilityTracker: NSViewRepresentable {
                 })
             }
             check(w)
+            poll?.invalidate()
+            let t = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+                guard let self, let w = self.window else { return }
+                self.check(w)
+            }
+            t.tolerance = 0.5
+            RunLoop.main.add(t, forMode: .common)
+            poll = t
         }
 
         /// Visible: shown and not fully covered. A key window is always treated as visible (it is in front of the user).
         private func check(_ w: NSWindow) {
+            if !requireUnoccluded { report(w.isVisible); return }
             report(w.isVisible && (w.isKeyWindow || w.occlusionState.contains(.visible)))
         }
 
@@ -440,7 +456,10 @@ struct VisibilityTracker: NSViewRepresentable {
             changed(v)
         }
 
-        deinit { observers.forEach(NotificationCenter.default.removeObserver) }
+        deinit {
+            poll?.invalidate()
+            observers.forEach(NotificationCenter.default.removeObserver)
+        }
     }
 }
 

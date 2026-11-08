@@ -203,6 +203,32 @@ final class CandidateTests: XCTestCase {
                       bundlePath: bundlePath, isFrontmost: before)
     }
 
+    /// Chrome started twice (two profiles) is two NSRunningApplications with one bundle path:
+    /// one row, RAM counted once, both copies quit together.
+    func testSameBundleRunningTwiceIsOneRow() {
+        let engine = ProcessAnalyzer(readWorkingDirectory: { _ in nil })
+        let t0 = Date(timeIntervalSince1970: 0)
+        let chrome = "/Applications/Google Chrome.app"
+        let apps = [app(10, chrome, id: "com.google.Chrome"), app(20, chrome, id: "com.google.Chrome", before: true)]
+        let list = [
+            makeProcess(10, 1, chrome + "/Contents/MacOS/Google Chrome", fp: 500 << 20),
+            makeProcess(11, 10, chrome + "/Contents/Frameworks/Google Chrome Framework.framework/Helpers/Google Chrome Helper.app/Contents/MacOS/Google Chrome Helper", fp: 100 << 20),
+            makeProcess(20, 1, chrome + "/Contents/MacOS/Google Chrome", startDate: 5, fp: 400 << 20),
+        ]
+        let result = engine.analyze(list, apps: apps, now: t0)
+        let rows = result.apps.filter { $0.app.bundlePath == chrome }
+        XCTAssertEqual(rows.count, 1, "one row per bundle")
+        XCTAssertEqual(rows.first?.footprint, 1000 << 20, "RAM counted once, not once per copy")
+        XCTAssertEqual(rows.first?.app.pid, 20, "the frontmost copy stands for the app")
+        XCTAssertEqual(rows.first?.otherInstances, [ProcessIdentity(pid: 10, startDate: t0)])
+
+        let candidates = CandidateBuilder.from(result).filter { $0.id == "app:\(chrome)" }
+        XCTAssertEqual(candidates.count, 1)
+        XCTAssertEqual(candidates.first?.quitMethod,
+                       .app(ProcessIdentity(pid: 20, startDate: t0.addingTimeInterval(5)), bundleId: "com.google.Chrome",
+                            others: [ProcessIdentity(pid: 10, startDate: t0)]))
+    }
+
     func testListAndIdle() {
         let engine = ProcessAnalyzer(readWorkingDirectory: { _ in nil })
         let t0 = Date(timeIntervalSince1970: 0)

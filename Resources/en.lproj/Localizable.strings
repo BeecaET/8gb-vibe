@@ -802,3 +802,4 @@
 "Gồm runtime và dữ liệu Simulator dùng chung. Quản lý trong Xcode." = "Includes runtimes and shared Simulator data. Manage in Xcode.";
 "Đang mở 28 phiên Claude Code. Kiểm tra và kết thúc phiên đã xong tại nơi bạn mở nó." = "28 Claude Code sessions open. Review and end finished sessions where you started them.";
 "Nhóm cài đặt" = "Settings group";
+"%lld bản app đang chạy, %lld tiến trình. App có thể hỏi lưu trước khi đóng." = "%1$lld copies running, %2$lld processes. The app may ask to save before quitting.";

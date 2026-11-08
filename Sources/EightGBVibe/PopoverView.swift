@@ -6,16 +6,15 @@ import VibeCore
 /// macOS keeps this window alive even when closed, so content is only drawn while visible to save CPU.
 struct PopoverView: View {
     @EnvironmentObject var monitor: Monitor
-    @State private var show = false
 
+    // Content is always built. Gating it on a visibility notice left the panel blank on many Macs
+    // (Apple silicon and Intel, 1.2.0): macOS does not reliably report the menu bar panel's visibility.
+    // The tracker now only tells the Monitor to sample faster while the panel is open.
     var body: some View {
-        Group {
-            if show { PopoverContent() } else { Color.clear.frame(width: 320, height: 520) }
-        }
-        .background(VisibilityTracker { v in
-            show = v
-            monitor.reportVisibility("popover", v)
-        })
+        PopoverContent()
+            .background(VisibilityTracker(requireUnoccluded: false) { v in
+                monitor.reportVisibility("popover", v)
+            })
     }
 }
 

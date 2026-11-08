@@ -4,8 +4,9 @@ import Foundation
 /// Data only. The app quits it after the user confirms.
 public struct QuitCandidate: Identifiable, Sendable, Hashable {
     public enum QuitMethod: Sendable, Hashable {
-        /// Sends the standard macOS quit; the app saves and closes itself.
-        case app(ProcessIdentity, bundleId: String?)
+        /// Sends the standard macOS quit; the app saves and closes itself. `others`: further running copies of the
+        /// same app bundle (e.g. Chrome started twice with different profiles), quit the same way.
+        case app(ProcessIdentity, bundleId: String?, others: [ProcessIdentity] = [])
         /// Shuts down every booted Simulator device (`xcrun simctl shutdown all`), then quits Simulator.app.
         case simulator(app: ProcessIdentity?)
         /// Sends a gentle stop signal (SIGTERM) to the processes.
@@ -97,7 +98,9 @@ public enum CandidateBuilder {
             if let b = selfIdentifier, a.app.bundleId == b { continue }
             if isSimulator(a.app) { continue }
             var fp = a.footprint
-            var note = String(localized: "\(a.processCount) tiến trình. App có thể hỏi lưu trước khi đóng.", bundle: .main)
+            var note = a.otherInstances.isEmpty
+                ? String(localized: "\(a.processCount) tiến trình. App có thể hỏi lưu trước khi đóng.", bundle: .main)
+                : String(localized: "\(a.otherInstances.count + 1) bản app đang chạy, \(a.processCount) tiến trình. App có thể hỏi lưu trước khi đóng.", bundle: .main)
             let isDocker = a.app.bundleId == "com.docker.docker" || a.app.bundlePath.hasSuffix("/Docker.app")
             if isDocker, let vm = dockerVM {
                 fp += vm.footprint
@@ -113,7 +116,7 @@ public enum CandidateBuilder {
                                                         path: a.app.bundlePath + "/Contents/MacOS/x",
                                                         startDate: a.startDate, footprint: nil, cpuNanos: nil)).0.group
             items.append(QuitCandidate(id: "app:\(a.app.bundlePath)", name: a.app.name, group: group,
-                                 quitMethod: .app(identity, bundleId: a.app.bundleId),
+                                 quitMethod: .app(identity, bundleId: a.app.bundleId, others: a.otherInstances),
                                  footprint: fp, cpu: a.cpu, startDate: a.startDate, lastActive: a.lastActive,
                                  isFrontmost: a.app.isFrontmost, note: note, blockedReason: key))
         }
