@@ -1,0 +1,33 @@
+name: Feature request / Đề xuất tính năng
+description: Suggest an idea for 8GB Vibe. / Đề xuất ý tưởng cho 8GB Vibe.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / Vấn đề
+      description: What slows you down today? / Điều gì đang làm bạn chậm?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Proposed solution / Giải pháp đề xuất
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you tried / Cách khác đã thử
+  - type: input
+    id: mac
+    attributes:
+      label: Mac model and RAM / Máy và RAM
+      placeholder: MacBook Air M2, 8 GB
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety / An toàn
+      options:
+        - label: The idea keeps the rule "always ask first, never quit or delete on its own". / Ý tưởng giữ nguyên tắc "luôn hỏi trước, không tự tắt, không tự xoá".
+          required: true
