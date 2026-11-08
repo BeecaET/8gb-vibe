@@ -6,6 +6,9 @@ cd "$(dirname "$0")/.."
 source scripts/common.sh
 
 swift build -c release -j 2 --product "$NAME"
-make_bundle "$(swift build -c release --show-bin-path)/$NAME" "build/$DISPLAY_NAME.app"
+swift build -c release -j 2 --product "$MCP_NAME"
+BIN_DIR="$(swift build -c release --show-bin-path)"
+make_bundle "$BIN_DIR/$NAME" "build/$DISPLAY_NAME.app" "$BIN_DIR/$MCP_NAME"
+codesign --force --sign - "build/$DISPLAY_NAME.app/Contents/Helpers/$MCP_NAME"
 codesign --force --sign - "build/$DISPLAY_NAME.app"
 echo "Done: build/$DISPLAY_NAME.app ($VERSION, build $BUILD_NUMBER)"

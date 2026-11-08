@@ -13,7 +13,7 @@ public enum ProcessGuard {
     /// macOS folders. Except `/System/Applications/` (Mail, Notes...), which the user may quit.
     static let systemDirectories = ["/System/", "/usr/libexec/", "/usr/sbin/", "/sbin/", "/Library/Apple/"]
 
-    static var claudeReason: String { String(localized: "Đóng app Claude sẽ ngắt mọi phiên Claude Code. Hãy lưu trữ phiên trong app Claude.", bundle: .main) }
+    static var claudeReason: String { String(localized: "App Claude được bảo vệ để tránh ngắt công việc bên trong. Hãy quản lý phiên tại nơi bạn mở nó.", bundle: .main) }
 
     /// Why it may not be quit. nil means it may be quit.
     public static func reason(pid: Int32, name: String, path: String, isClaudeCode: Bool = false,
@@ -29,7 +29,7 @@ public enum ProcessGuard {
             return String(localized: "Một phần của macOS. Dừng có thể làm máy lỗi.", bundle: .main)
         }
         if path.contains("/Claude.app/") { return claudeReason }
-        if isClaudeCode { return String(localized: "Phiên Claude Code đang chạy. Hãy lưu trữ phiên trong app Claude.", bundle: .main) }
+        if isClaudeCode { return String(localized: "Phiên Claude Code được bảo vệ. Kết thúc phiên tại Terminal hoặc app nơi bạn mở nó.", bundle: .main) }
         return nil
     }
 

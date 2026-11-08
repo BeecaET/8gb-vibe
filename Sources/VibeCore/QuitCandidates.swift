@@ -97,7 +97,7 @@ public enum CandidateBuilder {
             if let b = selfIdentifier, a.app.bundleId == b { continue }
             if isSimulator(a.app) { continue }
             var fp = a.footprint
-            var note = String(localized: "\(a.processCount) tiến trình. App tự lưu trước khi đóng.", bundle: .main)
+            var note = String(localized: "\(a.processCount) tiến trình. App có thể hỏi lưu trước khi đóng.", bundle: .main)
             let isDocker = a.app.bundleId == "com.docker.docker" || a.app.bundlePath.hasSuffix("/Docker.app")
             if isDocker, let vm = dockerVM {
                 fp += vm.footprint
@@ -107,7 +107,7 @@ public enum CandidateBuilder {
             guard fp >= ramThreshold, let identity = a.identity else { continue }
             var key = a.app.bundleId.flatMap { protectedBundles[$0] }
             if isClaude(a.app) {
-                key = String(localized: "Đóng app Claude sẽ ngắt mọi phiên Claude Code. Hãy lưu trữ phiên trong app Claude.", bundle: .main)
+                key = String(localized: "App Claude được bảo vệ để tránh ngắt công việc bên trong. Hãy quản lý phiên tại nơi bạn mở nó.", bundle: .main)
             }
             let group = ProcessClassifier.classifyOne(ProcessRecord(pid: a.app.pid, ppid: 1, uid: 501, name: a.app.name,
                                                         path: a.app.bundlePath + "/Contents/MacOS/x",
@@ -192,14 +192,14 @@ public enum SuggestionBuilder {
         let isSessionIdle = result.sessions.filter { now.timeIntervalSince($0.lastActive) >= idleTime }
         if !isSessionIdle.isEmpty {
             items.append(Suggestion(id: "phien-claude", kind: .archiveClaudeSessions,
-                           title: String(localized: "Lưu trữ \(isSessionIdle.count) phiên Claude Code rảnh", bundle: .main),
-                           detail: String(localized: "Rảnh trên \(Format.duration(idleTime)). Lưu trữ trong app Claude.", bundle: .main),
+                           title: String(localized: "Kiểm tra \(isSessionIdle.count) phiên Claude Code ít hoạt động", bundle: .main),
+                           detail: String(localized: "Ít dùng CPU trên \(Format.duration(idleTime)); có thể đang chờ phản hồi. Nếu đã xong, kết thúc tại nơi bạn mở phiên.", bundle: .main),
                            freed: isSessionIdle.reduce(0) { $0 + $1.footprint }))
         }
         for u in CandidateBuilder.from(result, selfIdentifier: selfIdentifier)
         where u.blockedReason == nil && u.footprint >= 200 << 20 && u.isIdle(afterSeconds: idleTime, now: now) {
             items.append(Suggestion(id: u.id, kind: .quitAll(u), title: String(localized: "Tắt \(u.name)", bundle: .main),
-                           detail: String(localized: "Không dùng \(Format.duration(now.timeIntervalSince(u.lastActive))).", bundle: .main),
+                           detail: String(localized: "Ít dùng CPU trong \(Format.duration(now.timeIntervalSince(u.lastActive))). Hãy kiểm tra trước khi đóng.", bundle: .main),
                            freed: u.footprint))
         }
         // Sessions growing in memory: exiting and resuming gives the memory back (/clear does not).

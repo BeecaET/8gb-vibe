@@ -30,12 +30,17 @@ echo "Signing with: $SIGN"
 
 echo "1/6 Building universal (arm64 + x86_64)..."
 swift build -c release -j 2 --arch arm64 --arch x86_64 --product "$NAME"
-BIN="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)/$NAME"
+swift build -c release -j 2 --arch arm64 --arch x86_64 --product "$MCP_NAME"
+BIN_DIR="$(swift build -c release --arch arm64 --arch x86_64 --show-bin-path)"
+BIN="$BIN_DIR/$NAME"
 lipo -info "$BIN"
+lipo -info "$BIN_DIR/$MCP_NAME"
 
 echo "2/6 Packaging and signing the app..."
 rm -rf "$OUT"; mkdir -p "$OUT"
-make_bundle "$BIN" "$APP"
+make_bundle "$BIN" "$APP" "$BIN_DIR/$MCP_NAME"
+# Nested code first (the MCP helper), then the app.
+codesign --force --options runtime --timestamp --sign "$SIGN" "$APP/Contents/Helpers/$MCP_NAME"
 codesign --force --options runtime --timestamp --sign "$SIGN" "$APP"
 codesign --verify --strict --verbose=2 "$APP"
 

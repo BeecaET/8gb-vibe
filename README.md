@@ -94,6 +94,14 @@ To decide what to build next, the app measures how the Mac copes, minute by minu
 "/Applications/8GB Vibe.app/Contents/MacOS/8GBVibe" --export-measurements ~/Desktop/8gb-measurements.csv
 ```
 
+## AI agents (MCP)
+
+`8GB Vibe.app/Contents/Helpers/8gbvibe-mcp` is an MCP server over stdio for AI agents (Claude Code, Codex, Gemini, Antigravity, Cursor). It reads the Mac's state and lets agents coordinate: `machine_status`, `heavy_processes`, `agent_sessions`, `hardware_profile`, `can_start` (advice before a heavy job), `register_agent`, `heartbeat`, `acquire_slot`/`release_slot` (one heavy-job slot, time-limited), `slots`, `post_message`/`read_messages`. No tool quits a process, deletes a file or changes a setting. Settings > AI agents sets the permission level and installs it into Claude Code after confirmation. Details (Vietnamese): [docs/NGHIEN_CUU_MCP.md](docs/NGHIEN_CUU_MCP.md).
+
+```bash
+claude mcp add --transport stdio --scope user 8gbvibe -- "/Applications/8GB Vibe.app/Contents/Helpers/8gbvibe-mcp"
+```
+
 ## Languages
 
 The app ships in Vietnamese (development language) and English. It follows the macOS language by default; Settings has a Language picker (Automatic, Tiếng Việt, English) that applies after a relaunch.

@@ -5,9 +5,10 @@ import VibeCore
 // Shared UI components: card, health ring, area chart, app icon, primary button.
 
 enum Palette {
-    /// Accent: emerald green like the icon (health, savings).
-    static let accent = LinearGradient(colors: [Color(red: 0.02, green: 0.55, blue: 0.40), Color(red: 0.08, green: 0.72, blue: 0.50)],
-                                      startPoint: .topLeading, endPoint: .bottomTrailing)
+    /// Accent gradient for primary buttons and highlights: the color chosen in Settings (emerald by default, like the icon).
+    static var accent: LinearGradient { AccentChoice.current.gradient }
+    /// Solid accent color (the color chosen in Settings). Used instead of the system accent so every highlight follows the choice.
+    static var tint: Color { AccentChoice.current.color }
 
     /// "What you gain" (reclaimed RAM), the lime highlight of the icon. Darker green in light mode so it stays readable.
     static let headroom = Color(nsColor: NSColor(name: nil) { a in
@@ -56,31 +57,12 @@ extension View {
     }
 }
 
-/// Primary button: gradient accent fill, white text.
-struct PrimaryButtonStyle: ButtonStyle {
-    var large = false
-    @Environment(\.isEnabled) private var canEnable
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(large ? .body.weight(.semibold) : .callout.weight(.semibold))
-            .foregroundStyle(canEnable ? Color.white : Color.secondary)
-            .padding(.horizontal, large ? 18 : 12)
-            .padding(.vertical, large ? 9 : 6)
-            // Disabled: neutral gray like a native button, not a faded accent that still looks active in dark mode.
-            .background(Capsule().fill(canEnable ? AnyShapeStyle(Palette.accent) : AnyShapeStyle(Color.primary.opacity(0.08))))
-            .opacity(configuration.isPressed ? 0.85 : 1)
-            .scaleEffect(configuration.isPressed && canEnable ? 0.97 : 1)
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
-    }
-}
-
 extension View {
     /// Right after launch the history has few points: fade the chart and say it is still collecting, instead of a flat line.
     func collecting(_ isCollecting: Bool) -> some View {
         opacity(isCollecting ? 0.35 : 1)
             .overlay {
-                if isCollecting { Text("Đang thu thập").font(.caption2).foregroundStyle(.secondary) }
+                if isCollecting { Text("Đang thu thập").font(.callout).foregroundStyle(.secondary) }
             }
     }
 }
@@ -102,17 +84,17 @@ struct HealthRing: View {
                                         startAngle: .degrees(0), endAngle: .degrees(360)),
                         style: StrokeStyle(lineWidth: net, lineCap: .round))
                 .rotationEffect(.degrees(-90))
-                .shadow(color: color[1].opacity(0.35), radius: size * 0.05)
             VStack(spacing: 0) {
                 Text("\(score)")
                     .font(.system(size: size * 0.3, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .motionCount()
                 if let label, size >= 100 {
-                    Text(label).font(.system(size: max(10, size * 0.075))).foregroundStyle(.secondary)
+                    Text(label).font(.system(size: max(11, size * 0.075))).foregroundStyle(.secondary)
                 }
             }
         }
+        .help("Số đo ước tính, không phải kiểm tra tốc độ. Điểm dựa trên áp lực bộ nhớ, swap vào ra, tải CPU và ổ trống.")
         .frame(width: size, height: size)
         .animation(.spring(response: 0.6, dampingFraction: 0.85), value: score)
         .accessibilityElement(children: .ignore)
@@ -218,7 +200,8 @@ struct StatusPill: View {
     var color: Color
     var body: some View {
         Text(owner)
-            .font(.caption.weight(.medium))
+            .font(.callout.weight(.medium))
+            .lineLimit(1).fixedSize()
             .foregroundStyle(color == .secondary ? Color.secondary : color)
             .padding(.horizontal, 8).padding(.vertical, 3)
             .background(Capsule().fill((color == .secondary ? Color.primary : color).opacity(0.12)))
@@ -247,7 +230,7 @@ struct MetricCard: View {
                 .font(.system(size: 24, weight: .semibold, design: .rounded))
                 .monospacedDigit()
                 .motionCount()
-            Text(subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+            Text(subtitle).font(.callout).foregroundStyle(.secondary).lineLimit(1)
             // Just launched, history has few points: say it is collecting instead of drawing a flat line.
             AreaChart(value: data, thresholds: thresholds, color: color, high: 34, ceiling: ceiling)
                 .collecting(data.count < 6)

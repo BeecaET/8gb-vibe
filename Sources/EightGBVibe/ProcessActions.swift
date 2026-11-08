@@ -8,12 +8,16 @@ struct LogEntry: Identifiable, Codable, Hashable {
     var timestamp: Date
     var action: String
     var target: String
+    /// Estimated: the footprint of what was closed (key "giaiPhong", kept for older versions).
     var freed: UInt64
     var outcome: String
+    /// Measured: RAM and swap in use before closing minus 10 seconds after (key "doDuoc"). Nil in older entries.
+    var measured: MeasuredDrop? = nil
 
     /// JSON keys written to the log file by earlier versions. Keep them so old entries still load.
     enum CodingKeys: String, CodingKey {
         case id, timestamp = "thoiDiem", action = "hanhDong", target = "doiTuong", freed = "giaiPhong", outcome = "ketQua"
+        case measured = "doDuoc"
     }
 }
 
@@ -22,22 +26,34 @@ enum ActionLog {
     static var file: URL {
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("8GB Vibe", isDirectory: true)
-        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
+                                                 attributes: [.posixPermissions: 0o700])
         return directory.appendingPathComponent("nhat-ky.jsonl")
     }
 
+    /// The log names the apps the user quit: owner-only (0600), like every other file of the app.
     static func write(_ d: LogEntry) {
         let enc = JSONEncoder()
         enc.dateEncodingStrategy = .iso8601
         guard var data = try? enc.encode(d) else { return }
         data.append(0x0A)
-        if let h = try? FileHandle(forWritingTo: file) {
+        let url = file
+        if let h = try? FileHandle(forWritingTo: url) {
             h.seekToEndOfFile()
             h.write(data)
             try? h.close()
         } else {
-            try? data.write(to: file)
+            FileManager.default.createFile(atPath: url.path, contents: data, attributes: [.posixPermissions: 0o600])
         }
+        tightenPermissions()
+    }
+
+    /// Fixes a log created by 1.1.1 or earlier with 0644. Called on write and at launch.
+    static func tightenPermissions() {
+        let path = file.path
+        guard let attrs = try? FileManager.default.attributesOfItem(atPath: path),
+              let mode = attrs[.posixPermissions] as? Int, mode & 0o077 != 0 else { return }
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: path)
     }
 
     /// Reads at most `maxCount` of the newest lines.

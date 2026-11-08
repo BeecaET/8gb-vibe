@@ -157,15 +157,22 @@ public struct MinuteRow: Sendable, Hashable {
     public var strained: Bool
     /// For the first minute of a strained episode: the group or session whose RAM grew most just before. Correlation only.
     public var suspect: String
+    /// Longest wait of the main thread (UI) to answer a ping, milliseconds. 0 when not measured.
+    public var mainLagMs: Double = 0
+    /// Longest delay of the once-a-second probe timer (the whole process stalled), milliseconds.
+    public var timerLagMs: Double = 0
+    /// Longest gap between two system samples, seconds (expected 5, or 15 when overloaded).
+    public var sampleGapS: Double = 0
 
-    public static let header = "minute,pressure,swap_in_mb,swap_out_mb,compressions_per_s,decompressions_per_s,pageout_mb,swap_used_gb,ram_used_pct,wired_gb,heavy_jobs,heavy_kinds,strained,suspect"
+    public static let header = "minute,pressure,swap_in_mb,swap_out_mb,compressions_per_s,decompressions_per_s,pageout_mb,swap_used_gb,ram_used_pct,wired_gb,heavy_jobs,heavy_kinds,strained,suspect,main_lag_ms,timer_lag_ms,sample_gap_s"
 
     public var csv: String {
         func f(_ x: Double, _ d: Int = 1) -> String { String(format: "%.\(d)f", x) }
         func q(_ s: String) -> String { s.isEmpty ? "" : "\"" + s.replacingOccurrences(of: "\"", with: "'") + "\"" }
         return [MinuteRow.iso.string(from: minute), "\(pressure)", f(swapInMB), f(swapOutMB), f(compressionsPerSec, 0),
                 f(decompressionsPerSec, 0), f(pageoutMB), f(swapUsedGB, 2), f(ramUsedPercent, 0), f(wiredGB, 2),
-                "\(heavyJobs)", q(heavyKinds), strained ? "1" : "0", q(suspect)].joined(separator: ",")
+                "\(heavyJobs)", q(heavyKinds), strained ? "1" : "0", q(suspect),
+                f(mainLagMs, 0), f(timerLagMs, 0), f(sampleGapS)].joined(separator: ",")
     }
 
     static let iso: ISO8601DateFormatter = {
@@ -185,11 +192,13 @@ public struct MinuteRow: Sendable, Hashable {
             cur.append(ch)
         }
         fields.append(cur)
-        guard fields.count == 14, let m = MinuteRow.iso.date(from: fields[0]), let p = Int(fields[1]) else { return nil }
+        // 14 fields: files from before the responsiveness columns were added.
+        guard fields.count == 14 || fields.count == 17, let m = MinuteRow.iso.date(from: fields[0]), let p = Int(fields[1]) else { return nil }
         let d = { (i: Int) in Double(fields[i]) ?? 0 }
         self.init(minute: m, pressure: p, swapInMB: d(2), swapOutMB: d(3), compressionsPerSec: d(4), decompressionsPerSec: d(5),
                   pageoutMB: d(6), swapUsedGB: d(7), ramUsedPercent: d(8), wiredGB: d(9), heavyJobs: Int(fields[10]) ?? 0,
                   heavyKinds: fields[11], strained: fields[12] == "1", suspect: fields[13])
+        if fields.count == 17 { mainLagMs = d(14); timerLagMs = d(15); sampleGapS = d(16) }
     }
 
     public init(minute: Date, pressure: Int, swapInMB: Double, swapOutMB: Double, compressionsPerSec: Double,
@@ -214,6 +223,10 @@ public final class MeasurementRecorder: @unchecked Sendable {
     public static let suspectMinGrowth: UInt64 = 100 << 20
 
     private let store: MeasurementStore?
+    /// Optional: when set, each row carries the main-thread and timer lag of the minute.
+    public var probe: ResponsivenessProbe?
+    private var lastSystemSample: Date?
+    private var sampleGap = 0.0
     private var lastCounters: (Date, VMCounters)?
     public private(set) var lastRates: VMRates?
     /// Rows of the last 24 hours, oldest first.
@@ -238,6 +251,8 @@ public final class MeasurementRecorder: @unchecked Sendable {
     public func addSystem(_ h: SystemSnapshot, counters: VMCounters?) {
         let now = h.timestamp
         roll(to: now)
+        if let last = lastSystemSample { sampleGap = max(sampleGap, now.timeIntervalSince(last)) }
+        lastSystemSample = now
         if let c = counters {
             if let (t, prev) = lastCounters, let r = VMRates.between(prev, c, seconds: now.timeIntervalSince(t)) {
                 lastRates = r
@@ -282,20 +297,24 @@ public final class MeasurementRecorder: @unchecked Sendable {
     private func finish(_ m: Date) {
         let strained = pressure >= 1 || swapIn + swapOut >= Self.strainSwapMB
         let wasStrained = rows.last.map { $0.strained && m.timeIntervalSince($0.minute) <= 120 } ?? false
-        let row = MinuteRow(minute: m, pressure: pressure, swapInMB: swapIn, swapOutMB: swapOut,
+        var row = MinuteRow(minute: m, pressure: pressure, swapInMB: swapIn, swapOutMB: swapOut,
                             compressionsPerSec: seconds > 0 ? compressions / seconds : 0,
                             decompressionsPerSec: seconds > 0 ? decompressions / seconds : 0,
                             pageoutMB: pageout, swapUsedGB: swapUsed, ramUsedPercent: ramUsed, wiredGB: wired,
                             heavyJobs: heavy, heavyKinds: kinds.sorted().joined(separator: "+"), strained: strained,
                             suspect: strained && !wasStrained ? suspect(at: m.addingTimeInterval(60)) : "")
+        if let lags = probe?.takeMinute() { row.mainLagMs = lags.mainLag * 1000; row.timerLagMs = lags.timerLag * 1000 }
+        row.sampleGapS = sampleGap
         rows.append(row)
         rows.removeAll { m.timeIntervalSince($0.minute) > 86_400 }
         store?.append(row)
         pressure = 0; swapIn = 0; swapOut = 0; pageout = 0; compressions = 0; decompressions = 0; seconds = 0
-        heavy = 0; kinds = []
+        heavy = 0; kinds = []; sampleGap = 0
     }
 
     /// The group or session whose RAM grew most over the last 2 to 10 minutes. Correlation, not proof.
+    public func currentSuspect(now: Date = Date()) -> String { suspect(at: now) }
+
     func suspect(at end: Date) -> String {
         guard let latest = footprints.last(where: { $0.0 <= end }) else { return "" }
         guard let earlier = footprints.first(where: { latest.0.timeIntervalSince($0.0) >= 120 }) else { return "" }
@@ -339,8 +358,10 @@ public final class MeasurementStore: @unchecked Sendable {
     deinit { if lockFD >= 0 { close(lockFD) } }
 
     /// Default folder: ~/Library/Application Support/8GB Vibe/measurements
+    /// (`VIBE_MEASUREMENTS_DIR` overrides it, so test copies do not mix with real data).
     public static var defaultDirectory: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        if let d = ProcessInfo.processInfo.environment["VIBE_MEASUREMENTS_DIR"], !d.isEmpty { return URL(fileURLWithPath: d, isDirectory: true) }
+        return FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("8GB Vibe", isDirectory: true).appendingPathComponent("measurements", isDirectory: true)
     }
 
@@ -363,11 +384,30 @@ public final class MeasurementStore: @unchecked Sendable {
         if isNew {
             fm.createFile(atPath: url.path, contents: Data(line.utf8), attributes: [.posixPermissions: 0o600])
             prune()
-        } else if let h = try? FileHandle(forWritingTo: url) {
-            h.seekToEndOfFile()
-            h.write(Data(line.utf8))
-            try? h.close()
+        } else {
+            // Before opening the handle: the upgrade replaces the file, and a handle opened earlier
+            // would keep writing to the old, unlinked copy.
+            Self.upgradeHeader(at: url)
+            if let h = try? FileHandle(forWritingTo: url) {
+                h.seekToEndOfFile()
+                h.write(Data(line.utf8))
+                try? h.close()
+            }
         }
+    }
+
+    /// A file started by an older version keeps its old header while new rows carry more columns.
+    /// Rewrites only the first line to the current header so external tools (Excel, pandas) name every column.
+    /// Old rows keep their fewer fields; the parser accepts both widths.
+    static func upgradeHeader(at url: URL) {
+        guard let text = try? String(contentsOf: url, encoding: .utf8),
+              let firstBreak = text.firstIndex(of: "\n") else { return }
+        let first = text[..<firstBreak]
+        guard first.hasPrefix("minute,"), first != MinuteRow.header else { return }
+        let fixed = MinuteRow.header + text[firstBreak...]
+        let tmp = url.appendingPathExtension("tmp")
+        guard FileManager.default.createFile(atPath: tmp.path, contents: Data(fixed.utf8), attributes: [.posixPermissions: 0o600]) else { return }
+        _ = try? FileManager.default.replaceItemAt(url, withItemAt: tmp)
     }
 
     /// CSV files, oldest first.

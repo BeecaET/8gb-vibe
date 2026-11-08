@@ -29,7 +29,7 @@ public struct DiskItem: Identifiable, Sendable, Hashable {
 public enum DiskScanner {
     public static let catalog: [DiskItem] = [
         DiskItem("Xcode DerivedData", "~/Library/Developer/Xcode/DerivedData", .safe, String(localized: "Xcode tự tạo lại khi build.", bundle: .main)),
-        DiskItem("Cache npm", "~/.npm/_cacache", .safe, String(localized: "Dọn bằng npm cache clean.", bundle: .main)),
+        DiskItem("Cache npm", "~/.npm/_cacache", .safe, String(localized: "Cache gói npm; có thể cần tải lại khi cài gói.", bundle: .main)),
         DiskItem("Cache pip", "~/Library/Caches/pip", .safe, String(localized: "Dọn bằng pip cache purge.", bundle: .main)),
         DiskItem("Cache uv", "~/.cache/uv", .safe, String(localized: "Dọn bằng uv cache clean.", bundle: .main)),
         DiskItem("Cache Homebrew", "~/Library/Caches/Homebrew", .safe, String(localized: "Dọn bằng brew cleanup.", bundle: .main)),
@@ -43,7 +43,7 @@ public enum DiskScanner {
 
         DiskItem(String(localized: "Dữ liệu Docker", bundle: .main), "~/Library/Containers/com.docker.docker", .review, String(localized: "Có thể chứa database, volume. Xem bằng docker system df.", bundle: .main)),
         DiskItem(String(localized: "Thiết bị Simulator", bundle: .main), "~/Library/Developer/CoreSimulator/Devices", .review, String(localized: "Có thể chứa dữ liệu test.", bundle: .main)),
-        DiskItem("Runtime Simulator", "/Library/Developer/CoreSimulator", .review, String(localized: "Xoá runtime cũ trong Xcode, mục Platforms.", bundle: .main)),
+        DiskItem("Runtime Simulator", "/Library/Developer/CoreSimulator", .review, String(localized: "Gồm runtime và dữ liệu Simulator dùng chung. Quản lý trong Xcode.", bundle: .main)),
         DiskItem("iOS DeviceSupport", "~/Library/Developer/Xcode/iOS DeviceSupport", .review, String(localized: "Cần khi cắm iPhone thật để debug.", bundle: .main)),
         DiskItem("Xcode Archives", "~/Library/Developer/Xcode/Archives", .review, String(localized: "Cần khi gửi bản lên App Store.", bundle: .main)),
         DiskItem("HuggingFace", "~/.cache/huggingface", .review, String(localized: "Model AI. Tải lại lâu.", bundle: .main)),

@@ -21,11 +21,10 @@ struct AgentsPage: View {
             }
             HStack(spacing: 10) {
                 StatBox(label: "Phiên agent", value: "\(sessions.count)",
-                        color: sessions.count > monitor.thresholds.sessionsYellow ? .orange : .primary,
-                        subtitle: "Nên dưới \(monitor.thresholds.sessionsYellow)")
+                        subtitle: "Các công cụ dòng lệnh đã nhận diện")
                 StatBox(label: "Phiên rảnh", value: "\(sessions.filter(isIdle).count)",
                         color: sessions.contains(where: isIdle) ? .orange : .primary,
-                        subtitle: "Rảnh trên \(Format.number(monitor.thresholds.idleMinutes, digits: 0)) phút")
+                        subtitle: "Ít CPU trên \(Format.number(monitor.thresholds.idleMinutes, digits: 0)) phút")
                 StatBox(label: "RAM công cụ AI", value: Format.bytes(items.reduce(0) { $0 + $1.footprint }),
                         subtitle: "Gồm cả tiến trình con")
             }
@@ -42,11 +41,11 @@ struct AgentsPage: View {
                 Text("Chưa thấy công cụ AI nào đang mở.").foregroundStyle(.secondary)
             }
             HStack {
-                Text("Thời gian rảnh chỉ tính từ lúc app bắt đầu theo dõi. App không tự tắt phiên.")
-                    .font(.caption).foregroundStyle(.secondary)
+                Text("“Rảnh” nghĩa là ít dùng CPU từ lúc theo dõi; phiên có thể đang chờ phản hồi. Kết thúc phiên tại Terminal hoặc app nơi bạn mở nó.")
+                    .font(.callout).foregroundStyle(.secondary)
                 Spacer()
                 if items.contains(where: { $0.name == "Claude Code" }) {
-                    Button("Mở Claude để lưu trữ phiên") { monitor.openClaude() }
+                    Button("Mở Claude") { monitor.openClaude() }
                 }
             }
         }
@@ -100,11 +99,11 @@ struct AgentsPage: View {
                     Text("Các app đang cần hơn RAM máy khoảng \(Format.bytes(c.overflow)). Đóng bớt phiên hoặc app không dùng trước.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
-                Text("Chỉ là ước tính theo RAM các app đang cần, không bảo đảm máy không swap.").font(.caption).foregroundStyle(.tertiary)
+                Text("Chỉ là ước tính theo RAM các app đang cần, không bảo đảm máy không swap.").font(.callout).foregroundStyle(.secondary)
             }
             Spacer()
             if case .room = c.state {} else {
-                Button("Dọn RAM") { monitor.page = .freeRAM }.buttonStyle(PrimaryButtonStyle())
+                Button("Dọn RAM") { monitor.page = .freeRAM }.buttonStyle(.borderedProminent)
             }
         }
         .padding(14)
@@ -150,7 +149,7 @@ struct AgentsPage: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: expanded.contains(c.name) ? "chevron.down" : "chevron.right")
-                    .font(.caption2).foregroundStyle(.secondary).frame(width: 10)
+                    .font(.callout).foregroundStyle(.secondary).frame(width: 10)
                     .opacity(hasSessions ? 1 : 0)
                 if let bundlePath = c.bundlePath {
                     IconApp(path: bundlePath, size: 22)
@@ -162,9 +161,9 @@ struct AgentsPage: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(c.name).fontWeight(.medium)
                     if hasSessions {
-                        Text("\(c.sessions.count) phiên").font(.caption).foregroundStyle(.tertiary)
+                        Text("\(c.sessions.count) phiên").font(.callout).foregroundStyle(.secondary)
                     } else if let g = c.note {
-                        Text(g).font(.caption).foregroundStyle(.tertiary)
+                        Text(g).font(.callout).foregroundStyle(.secondary)
                     }
                 }
                 Spacer()
@@ -212,8 +211,8 @@ struct AgentsPage: View {
                 }
                 .font(.callout)
             }
-            Text("Mỗi phiên agent tự chạy một bản MCP riêng. Đóng phiên đã xong việc, hoặc tắt MCP ít dùng trong cài đặt của agent, để bớt RAM.")
-                .font(.caption).foregroundStyle(.secondary)
+            Text("Nhiều phiên hoặc app có thể chạy các bản MCP riêng. Nhiều bản không nhất thiết là lỗi. Kiểm tra phiên đã xong hoặc MCP ít dùng để giảm RAM.")
+                .font(.callout).foregroundStyle(.secondary)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -223,17 +222,24 @@ struct AgentsPage: View {
     private func sessionRow(_ p: AgentSession) -> some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(p.projectName ?? String(localized: "Không rõ thư mục", bundle: .main))
+                HStack(spacing: 6) {
+                    Text(p.projectName ?? String(localized: "Không rõ thư mục", bundle: .main))
+                        .lineLimit(1).truncationMode(.middle)
+                    // Open for more than a day: usually finished work still holding RAM.
+                    if Date().timeIntervalSince(p.startDate) > 24 * 3600 {
+                        StatusPill(owner: "lâu ngày", color: .orange)
+                    }
+                }
                 Text("Mở \(Format.duration(Date().timeIntervalSince(p.startDate))) · PID \(String(p.pid))")
-                    .font(.caption).foregroundStyle(.tertiary)
+                    .font(.callout).foregroundStyle(.secondary).lineLimit(1)
                 if monitor.processes.memoryWarnings.contains(where: { $0.sessionID == p.id }) {
                     Text(p.tool == "Claude Code" ? "RAM đang phình: gõ /exit rồi mở lại bằng claude -c" : "RAM đang phình: thoát phiên rồi mở lại")
-                        .font(.caption).foregroundStyle(.orange)
+                        .font(.callout).foregroundStyle(.orange)
                 }
                 let mcp = monitor.processes.mcpServers.filter { $0.origin?.sessionID == p.id }
                 if !mcp.isEmpty {
                     Text("\(mcp.count) MCP (\(mcp.map(\.name).joined(separator: ", "))) · \(Format.bytes(mcp.reduce(0) { $0 + $1.footprint }))")
-                        .font(.caption).foregroundStyle(.tertiary).lineLimit(1)
+                        .font(.callout).foregroundStyle(.secondary).lineLimit(1)
                 }
             }
             Spacer()

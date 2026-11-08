@@ -26,21 +26,29 @@ struct PopoverContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             head
+            // Newest unread alert, if any.
+            InboxStrip { page in open(page) }.padding(.top, 10)
             if let h = monitor.system {
-                metric(h).padding(.top, 14)
+                // The one thing to do now; acting on it opens the main window on the right page.
+                AdviceCard(compact: true) { action in
+                    if action == .freeRAM { open(.freeRAM) }
+                    if action == .reviewSessions { open(.agents) }
+                    if action == .reviewDisk { open(.disk) }
+                }
+                .padding(.top, 12)
+                metric(h).padding(.top, 12)
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Text("Swap · 1 giờ").font(.caption.weight(.medium)).foregroundStyle(.secondary)
+                        Text("Swap · lịch sử gần đây").font(.callout.weight(.medium)).foregroundStyle(.secondary)
                         Spacer()
-                        Text(Format.bytes(h.swap.used)).font(.caption).monospacedDigit().foregroundStyle(.secondary)
+                        Text(Format.bytes(h.swap.used)).font(.callout).monospacedDigit().foregroundStyle(.secondary)
                     }
                     AreaChart(value: monitor.history.map(\.swapGB), thresholds: monitor.thresholds.swapYellowGB,
-                               color: (monitor.levels[.swap] ?? .ok) == .ok ? .teal : (monitor.levels[.swap] ?? .ok).color, high: 40)
+                               color: (monitor.levels[.swap] ?? .ok) == .ok ? .teal : (monitor.levels[.swap] ?? .ok).color, high: 30)
                         .collecting(monitor.history.count < 6)
                 }
                 .padding(.top, 14)
                 topApp.padding(.top, 14)
-                action.padding(.top, 14)
             } else {
                 ProgressView().frame(maxWidth: .infinity).padding(30)
             }
@@ -51,15 +59,22 @@ struct PopoverContent: View {
         .frame(width: 320)
     }
 
+    /// Status readable in one second: score ring, one line, and the command palette shortcut.
     private var head: some View {
-        HStack(spacing: 14) {
-            HealthRing(score: monitor.score, size: 58, label: nil)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(HealthScore.summary(monitor.score)).font(.system(size: 17, weight: .bold, design: .rounded))
-                Text(monitor.explanation).font(.caption).foregroundStyle(.secondary).lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
+        HStack(spacing: 12) {
+            HealthRing(score: monitor.score, size: 44, label: nil)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(HealthScore.summary(monitor.score)).font(.title3.weight(.bold))
+                if let h = monitor.system {
+                    Text("Swap \(Format.bytes(h.swap.used)) · RAM \(Format.percent(h.memory.usedRatio))")
+                        .font(.callout).foregroundStyle(.secondary).monospacedDigit()
+                }
             }
             Spacer(minLength: 0)
+            Button { openPalette() } label: { KeyHint("⌘K") }
+                .buttonStyle(.plain)
+                .help("Tìm hoặc ra lệnh")
+                .accessibilityLabel("Mở bảng lệnh")
         }
     }
 
@@ -68,13 +83,21 @@ struct PopoverContent: View {
             o("RAM", Format.percent(h.memory.usedRatio), h.memory.usedRatio, color(.pressure, .blue))
             o("Swap", Format.bytes(h.swap.used),
               Double(h.swap.used) / Format.GB / max(1, monitor.thresholds.swapRedGB), color(.swap, .teal))
-            o("Ổ trống", Format.bytes(h.disk.free, digits: 0), h.disk.fullRatio, color(.disk, .purple))
+            // Every agent session (Claude Code, Codex, Gemini...), counted like the AI Agents page and MCP.
+            let sessions = AIToolBuilder.from(monitor.processes).flatMap(\.sessions).count
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Phiên AI").font(.callout).foregroundStyle(.secondary)
+                Text("\(sessions)").font(.system(size: 15, weight: .semibold, design: .rounded)).monospacedDigit()
+                Text("Đang mở").font(.callout).foregroundStyle(.secondary)
+            }
+            .padding(10).frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.05)))
         }
     }
 
     private func o(_ label: LocalizedStringKey, _ value: String, _ ratio: Double, _ color: Color) -> some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(label).font(.caption).foregroundStyle(.secondary)
+            Text(label).font(.callout).foregroundStyle(.secondary)
             Text(value).font(.system(size: 15, weight: .semibold, design: .rounded)).monospacedDigit().motionCount()
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -89,45 +112,36 @@ struct PopoverContent: View {
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Color.primary.opacity(0.05)))
     }
 
+    /// Real top RAM users across every group (apps, the Claude VM, agent sessions, system), including protected ones,
+    /// shown as observation. Only items that can be quit get a button, which opens Free RAM with that app selected.
     private var topApp: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Dùng nhiều RAM nhất").font(.caption.weight(.medium)).foregroundStyle(.secondary)
-            ForEach(monitor.candidates.prefix(4)) { u in
+        let items = monitor.processes.groups.flatMap(\.items).sorted { $0.footprint > $1.footprint }.prefix(4)
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("Dùng nhiều RAM nhất").font(.callout.weight(.medium)).foregroundStyle(.secondary)
+            ForEach(Array(items)) { item in
+                let u = monitor.candidates.first { $0.name == item.name }
                 HStack(spacing: 10) {
-                    CandidateIcon(u: u, size: 22)
-                    Text(u.name).lineLimit(1)
+                    if let u { CandidateIcon(u: u, size: 22) } else { GroupIcon(group: item.group, size: 22) }
+                    Text(item.name).lineLimit(1)
+                    // Anything that cannot be quit from here (protected app, VM, system, agent sessions) shows a lock.
+                    if u == nil || u?.blockedReason != nil {
+                        Image(systemName: "lock.fill").font(.callout).foregroundStyle(.tertiary)
+                            .help(u?.blockedReason ?? String(localized: "Không đóng từ đây", bundle: .main))
+                            .accessibilityLabel("Không đóng từ đây")
+                    }
                     Spacer()
-                    Text(Format.bytes(u.footprint)).monospacedDigit().foregroundStyle(.secondary)
+                    Text(Format.bytes(item.footprint)).monospacedDigit().foregroundStyle(.secondary)
+                    if let u, u.blockedReason == nil {
+                        Button {
+                            monitor.freeRAMPreselect = [u.id]
+                            open(.freeRAM)
+                        } label: { Image(systemName: "xmark.circle") }
+                            .buttonStyle(.borderless).foregroundStyle(.secondary)
+                            .help("Đóng \(u.name)… (sẽ hỏi lại)").accessibilityLabel("Đóng \(u.name)")
+                    }
                 }
                 .font(.callout)
             }
-            if !monitor.processes.sessions.isEmpty {
-                HStack(spacing: 10) {
-                    GroupIcon(group: .claude, size: 22)
-                    Text("\(monitor.processes.sessions.count) phiên Claude Code").lineLimit(1)
-                    Spacer()
-                    Text(Format.bytes(monitor.processes.sessions.reduce(0) { $0 + $1.footprint }))
-                        .monospacedDigit().foregroundStyle(.secondary)
-                }
-                .font(.callout)
-            }
-        }
-    }
-
-    @ViewBuilder private var action: some View {
-        let isSlow = (monitor.levels[.slowMac] ?? .ok) != .ok
-        if monitor.freeableFromCandidates > 0 || isSlow {
-            Button { open(.freeRAM) } label: {
-                HStack {
-                    Image(systemName: isSlow ? "exclamationmark.triangle.fill" : "wand.and.stars")
-                    Text(monitor.freeableFromCandidates > 0 ? String(localized: "Dọn RAM · giải phóng \(Format.bytes(monitor.freeableFromCandidates))", bundle: .main)
-                                                   : String(localized: "Máy đang chậm · Dọn RAM", bundle: .main))
-                    Spacer()
-                    Image(systemName: "arrow.right")
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(PrimaryButtonStyle(large: true))
         }
     }
 
@@ -152,6 +166,13 @@ struct PopoverContent: View {
     private func color(_ c: Metric, _ defaultValue: Color) -> Color {
         let m = monitor.levels[c] ?? .ok
         return m == .ok ? defaultValue : m.color
+    }
+
+    /// Opens the main window with the command palette showing.
+    private func openPalette() {
+        openWindow(id: "chinh")
+        NSApp.activate(ignoringOtherApps: true)
+        monitor.showPalette = true
     }
 
     private func open(_ page: Page) {

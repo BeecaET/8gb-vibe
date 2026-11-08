@@ -5,33 +5,11 @@ import VibeCore
 /// Main window, laid out like System Settings.
 struct MainWindow: View {
     @EnvironmentObject var monitor: Monitor
+    @ObservedObject private var inbox = Inbox.shared
 
     var body: some View {
         NavigationSplitView {
-            List(selection: Binding(get: { monitor.page }, set: { if let t = $0 { monitor.page = t } })) {
-                Section("Vibe") {
-                    ForEach([Page.agents, .devServers]) { t in
-                        Label(t.name, systemImage: t.symbol).tag(t)
-                    }
-                }
-                Section("Xem") {
-                    ForEach([Page.overview, .memory, .processes, .disk, .backgroundItems]) { t in
-                        Label(t.name, systemImage: t.symbol).tag(t)
-                    }
-                }
-                Section("Xử lý") {
-                    ForEach([Page.freeRAM, .log]) { t in
-                        Label(t.name, systemImage: t.symbol).tag(t)
-                    }
-                }
-                Section("Ứng dụng") {
-                    ForEach([Page.settings, .about]) { t in
-                        Label(t.name, systemImage: t.symbol).tag(t)
-                    }
-                }
-            }
-            .safeAreaInset(edge: .top) { sidebarHeader }
-            .navigationSplitViewColumnWidth(min: 190, ideal: 210)
+            sidebar
         } detail: {
             Group {
                 switch monitor.page {
@@ -42,19 +20,27 @@ struct MainWindow: View {
                 case .processes: ProcessesPage()
                 case .disk: DiskPage()
                 case .backgroundItems: BackgroundPage()
+                case .machine: MachinePage()
                 case .freeRAM: FreeRAMPage()
                 case .log: LogPage()
+                case .inbox: InboxPage()
                 case .settings: SettingsPage()
                 case .about: AboutPage()
                 }
             }
             .navigationTitle(monitor.page.name)
+            // Title bar without its own band: the standard band starts a few points off the sidebar divider (a visible
+            // seam the owner rejected). Instead every page is clipped to the area under the title bar, so scrolled
+            // content (scroll views, the Settings form, tables) never runs behind the page title.
+            .toolbarBackground(.hidden, for: .windowToolbar)
+            .clipped()
+            .sheet(isPresented: $monitor.showWelcome) { WelcomeSheet().environmentObject(monitor) }
             // Reward after a cleanup: slides up from the bottom of the content area, then hides itself.
             .overlay(alignment: .bottom) {
                 if let freed = monitor.lastFreed {
-                    RewardCard(summary: freed) {
+                    RewardCard(summary: freed, close: {
                         if monitor.lastFreed?.id == freed.id { monitor.lastFreed = nil }
-                    }
+                    }, openLog: { monitor.page = .log; monitor.lastFreed = nil })
                     .frame(maxWidth: 460)
                     .padding(20)
                     .id(freed.id)
@@ -62,6 +48,30 @@ struct MainWindow: View {
                 }
             }
             .animation(.spring(response: 0.45, dampingFraction: 0.85), value: monitor.lastFreed?.id)
+        }
+        // Cmd-K command palette over the whole window, with the content dimmed behind it.
+        .overlay {
+            if monitor.showPalette {
+                ZStack(alignment: .top) {
+                    Color.black.opacity(0.25).ignoresSafeArea().onTapGesture { monitor.showPalette = false }
+                    CommandPalette().padding(.top, 70)
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.15), value: monitor.showPalette)
+        .background {
+            // Invisible buttons own the shortcuts while the main window is key (this menu bar app has no menu bar of
+            // its own): Cmd-K for the palette, Cmd-1...9 and Cmd-comma for pages.
+            ZStack {
+                Button("") { monitor.showPalette.toggle() }.keyboardShortcut("k")
+                ForEach(Page.allCases) { p in
+                    if let k = p.shortcut {
+                        Button("") { monitor.page = p; monitor.showPalette = false }.keyboardShortcut(KeyEquivalent(k))
+                    }
+                }
+            }
+            .opacity(0).accessibilityHidden(true)
         }
         .background(VisibilityTracker { monitor.reportVisibility("main-window", $0) })
         .sheet(item: Binding(get: { monitor.pendingConfirmation.map { QuitRequest(items: $0) } },
@@ -80,20 +90,47 @@ struct MainWindow: View {
 }
 
 extension MainWindow {
+    /// Standard sidebar list: system selection, keyboard navigation and VoiceOver come for free.
+    private var sidebar: some View {
+        List(selection: Binding<Page?>(get: { monitor.page }, set: { if let p = $0 { monitor.page = p } })) {
+            ForEach(Page.sidebarGroups, id: \.pages) { group in
+                Section(group.title) {
+                    ForEach(group.pages) { sidebarRow($0) }
+                }
+            }
+        }
+        .listStyle(.sidebar)
+        // Icons follow the chosen accent. The selection fill is drawn by macOS from the app's accent (emerald) and
+        // cannot change at runtime; that is the trade-off for the standard sidebar.
+        .listItemTint(Palette.tint)
+        .safeAreaInset(edge: .top) { sidebarHeader }
+        .navigationSplitViewColumnWidth(min: 190, ideal: 210)
+    }
+
+    /// Sidebar row: symbol and name. The shortcut is not printed in the row (it cluttered the list); it is in the
+    /// tooltip, the View menu and the Cmd-K palette. Notifications carry the unread count as a standard badge.
+    func sidebarRow(_ t: Page) -> some View {
+        Label(t.name, systemImage: t.symbol)
+            .badge(t == .inbox ? inbox.unread.count : 0)
+            .help(t.shortcutHint.map { Text("\(t.name) (\($0))") } ?? Text(t.name))
+            .tag(t)
+    }
+
     /// Sidebar header: icon, app name, health score.
     var sidebarHeader: some View {
         HStack(spacing: 10) {
             Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 34, height: 34)
-            VStack(alignment: .leading, spacing: 1) {
-                (Text("8GB").font(.system(size: 16, weight: .heavy, design: .rounded))
-                 + Text(" Vibe").font(.system(size: 15, weight: .regular, design: .rounded)).foregroundColor(.secondary))
+            // The icon already reads "8GB", so no wordmark next to it: just the Mac's status, readable at a glance.
+            VStack(alignment: .leading, spacing: 2) {
+                Text(HealthScore.summary(monitor.score))
+                    .font(.headline)
+                    .lineLimit(1).minimumScaleFactor(0.85)
                 HStack(spacing: 5) {
-                    Circle().fill(Palette.forScore(monitor.score)).frame(width: 7, height: 7)
-                    // One line: long English summaries shrink slightly instead of wrapping the score onto a new line.
-                    Text("\(HealthScore.summary(monitor.score)) · \(monitor.score)").font(.caption).foregroundStyle(.secondary)
-                        .lineLimit(1).minimumScaleFactor(0.8)
+                    Circle().fill(Palette.forScore(monitor.score)).frame(width: 8, height: 8)
+                    Text("Điểm \(monitor.score)").font(.callout).foregroundStyle(.secondary).monospacedDigit()
                 }
             }
+            .accessibilityElement(children: .combine)
             Spacer()
         }
         .padding(.horizontal, 14).padding(.top, 6).padding(.bottom, 10)
@@ -113,15 +150,23 @@ struct PageContainer<Content: View>: View {
         // Always open at the top. macOS moves focus to the last button on the page and scrolls to it, so scroll back up.
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 0) {
                     Color.clear.frame(height: 0).id("page-top")
-                    content
+                    VStack(alignment: .leading, spacing: 16) { content }
+                    Color.clear.frame(height: 0).id("page-bottom")
                 }
-                .padding(20)
+                .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 20)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .onAppear {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { proxy.scrollTo("page-top", anchor: .top) }
+                // Three times: on a busy Mac the focus jump can land late; a page left half-scrolled showed its top line cut under the title bar.
+                for delay in [0.05, 0.5, 1.2] where !CommandLine.arguments.contains("--scroll-end") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) { proxy.scrollTo("page-top", anchor: .top) }
+                }
+                // --scroll-end: scrolls to the bottom once loaded, to check the title bar over scrolled content (UI testing).
+                if CommandLine.arguments.contains("--scroll-end") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { proxy.scrollTo("page-bottom", anchor: .bottom) }
+                }
             }
         }
     }
@@ -135,7 +180,7 @@ struct SectionTitle: View {
         HStack(alignment: .firstTextBaseline) {
             Text(s).font(.headline)
             Spacer()
-            if let subtitle { Text(subtitle).font(.caption).foregroundStyle(.secondary) }
+            if let subtitle { Text(subtitle).font(.callout).foregroundStyle(.secondary) }
         }
     }
 }
@@ -148,104 +193,102 @@ struct OverviewPage: View {
     var body: some View {
         PageContainer {
             if let h = monitor.system {
-                hero
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 4), spacing: 12) {
+                // Lead with what to do now: the score ring next to one sentence of advice and one button.
+                HStack(alignment: .center, spacing: 20) {
+                    HealthRing(score: monitor.score, size: 110)
+                    AdviceCard()
+                }
+                // Three cards, three questions: how full is RAM, is swap growing, can I open another session.
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
                     MetricCard(label: "RAM", symbol: "memorychip", value: Format.percent(h.memory.usedRatio),
                              subtitle: "\(Format.bytes(h.memory.used)) / \(Format.bytes(h.memory.total, digits: 0))",
                              color: metricColor(.pressure, defaultValue: .blue), data: monitor.history.map { $0.ramRatio * 100 }, ceiling: 100)
                     MetricCard(label: "Swap", symbol: "arrow.left.arrow.right", value: Format.bytes(h.swap.used),
                              subtitle: "Ngưỡng vàng \(Format.number(monitor.thresholds.swapYellowGB, digits: 0)) GB",
                              color: metricColor(.swap, defaultValue: .teal), data: monitor.history.map(\.swapGB), thresholds: monitor.thresholds.swapYellowGB)
-                    MetricCard(label: "Tải CPU", symbol: "cpu", value: Format.number(h.load.m5, digits: 1),
-                             subtitle: "5 phút · \(h.coreCount) nhân",
-                             color: metricColor(.load, defaultValue: .indigo), data: monitor.history.map(\.load), thresholds: Double(h.coreCount))
-                    diskCard(h)
+                        .help("Swap là bộ nhớ được chuyển tạm ra ổ đĩa. Dung lượng đang dùng khác với tốc độ đọc ghi swap.")
+                    sessionRoomCard
                 }
-                // Both cards have the same height so no uneven gap is left.
-                HStack(alignment: .top, spacing: 12) {
-                    topRAMUsers.frame(maxHeight: .infinity, alignment: .top)
-                    suggestions.frame(maxHeight: .infinity, alignment: .top)
-                }
-                .fixedSize(horizontal: false, vertical: true)
+                secondaryLine(h)
+                topRAMUsers
             } else {
                 ProgressView().frame(maxWidth: .infinity, minHeight: 300)
             }
         }
     }
 
-    private var hero: some View {
-        HStack(spacing: 28) {
-            HealthRing(score: monitor.score, size: 150)
-            VStack(alignment: .leading, spacing: 10) {
-                Text(HealthScore.summary(monitor.score))
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                Text(monitor.explanation)
-                    .font(.title3).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 10) {
-                    if monitor.freeableFromCandidates > 0 {
-                        Button { monitor.page = .freeRAM } label: {
-                            Label("Dọn RAM · giải phóng \(Format.bytes(monitor.freeableFromCandidates))", systemImage: "wand.and.stars")
-                        }
-                        .buttonStyle(PrimaryButtonStyle(large: true))
-                    } else {
-                        Button { monitor.page = .freeRAM } label: { Label("Dọn RAM", systemImage: "wand.and.stars") }
-                            .buttonStyle(PrimaryButtonStyle(large: true))
-                    }
-                    Button("Xem bộ nhớ") { monitor.page = .memory }.controlSize(.large)
-                }
-                .padding(.top, 4)
+    /// "Can I open another agent session?" answered in one word, from the RAM budget estimate.
+    private var sessionRoomCard: some View {
+        let state = monitor.budget.map { SessionHeadroom(budget: $0, sessions: AIToolBuilder.from(monitor.processes).flatMap(\.sessions)).state }
+        let (value, color): (String, Color) = {
+            switch state {
+            case .room(let n)?: return (n > 9 ? "~9+" : "~\(n)", n >= 2 ? .green : .orange)
+            case .tight?: return (String(localized: "Sát", bundle: .main), .orange)
+            case .short?: return (String(localized: "Không", bundle: .main), .red)
+            case nil: return ("-", .secondary)
             }
-            Spacer(minLength: 0)
+        }()
+        return Button { monitor.page = .agents } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles").foregroundStyle(color)
+                    Text("Thêm phiên (ước tính)").foregroundStyle(.secondary)
+                }
+                .font(.callout)
+                Text(value).font(.system(size: 24, weight: .semibold, design: .rounded)).foregroundStyle(color)
+                Text("Đang mở \(AIToolBuilder.from(monitor.processes).flatMap(\.sessions).count) phiên agent").font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                Spacer(minLength: 0)
+                Text("Xem Agent AI ›").font(.callout).foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
         }
-        .padding(24)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(LinearGradient(colors: [Palette.forScore(monitor.score).opacity(0.10), Color(nsColor: .controlBackgroundColor)],
-                                     startPoint: .topLeading, endPoint: .bottomTrailing))
-        )
-        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.primary.opacity(0.07), lineWidth: 1))
+        .buttonStyle(.plain)
+        .card(padding: 14)
     }
 
-    private func diskCard(_ h: SystemSnapshot) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Image(systemName: "internaldrive").foregroundStyle(metricColor(.disk, defaultValue: .purple))
-                Text("Ổ trống").foregroundStyle(.secondary)
+    /// CPU and disk in one quiet line; each part opens its page.
+    private func secondaryLine(_ h: SystemSnapshot) -> some View {
+        HStack(spacing: 16) {
+            Button { monitor.page = .processes } label: {
+                Label("CPU \(Format.number(h.load.m5, digits: 1)) trên \(h.coreCount) nhân", systemImage: "cpu")
+                    .foregroundStyle(metricColor(.load, defaultValue: .secondary))
             }
-            .font(.callout)
-            Text(Format.bytes(h.disk.free, digits: 0))
-                .font(.system(size: 24, weight: .semibold, design: .rounded)).monospacedDigit()
-            Text("Đầy \(Format.percent(h.disk.fullRatio)) · \(Format.bytes(h.disk.total, digits: 0))")
-                .font(.caption).foregroundStyle(.secondary)
-            Spacer(minLength: 0)
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Color.primary.opacity(0.08))
-                    Capsule().fill(metricColor(.disk, defaultValue: .purple).gradient)
-                        .frame(width: geo.size.width * h.disk.fullRatio)
-                }
+            Button { monitor.page = .disk } label: {
+                Label("Ổ trống \(Format.bytes(h.disk.free, digits: 0))", systemImage: "internaldrive")
+                    .foregroundStyle(metricColor(.disk, defaultValue: .secondary))
             }
-            .frame(height: 8)
-            .padding(.bottom, 13)
+            Spacer()
+            // Before the first process scan the timestamp is the reference date: say it is still reading instead of "739,929 days ago".
+            if let age = monitor.processesAge {
+                Text("Cập nhật \(Format.duration(age)) trước").foregroundStyle(.secondary)
+            } else {
+                Text("Đang đọc tiến trình…").foregroundStyle(.secondary)
+            }
         }
-        .card(padding: 14)
+        .buttonStyle(.plain)
+        .font(.callout)
+        .monospacedDigit()
     }
 
     private var topRAMUsers: some View {
         let items = Array(monitor.candidates.prefix(6))
         let largest = Double(items.first?.footprint ?? 1)
-        return VStack(alignment: .leading, spacing: 12) {
-            SectionTitle("Ai đang chiếm RAM", subtitle: "App và dịch vụ lớn nhất")
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                SectionTitle("Ai đang chiếm RAM", subtitle: nil)
+                Spacer()
+                Button("Dọn RAM ›") { monitor.page = .freeRAM }.buttonStyle(.link)
+            }
             ForEach(items) { u in
                 HStack(spacing: 10) {
                     CandidateIcon(u: u, size: 28)
                     VStack(alignment: .leading, spacing: 4) {
-                        HStack {
+                        HStack(spacing: 8) {
                             Text(u.name).lineLimit(1)
                             Spacer()
-                            Text(Format.bytes(u.footprint)).monospacedDigit().foregroundStyle(.secondary)
+                            statusChip(u)
+                            Text(Format.bytes(u.footprint)).monospacedDigit().foregroundStyle(.secondary).frame(width: 70, alignment: .trailing)
                         }
                         GeometryReader { geo in
                             Capsule().fill(u.group.color.gradient)
@@ -260,50 +303,15 @@ struct OverviewPage: View {
         .card()
     }
 
-    private var suggestions: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            SectionTitle("Gợi ý")
-            if monitor.suggestions.isEmpty {
-                // Empty state centered in the card.
-                let waiting = Date().timeIntervalSince(monitor.monitoringStart) < monitor.thresholds.idleMinutes * 60
-                VStack(spacing: 8) {
-                    Image(systemName: waiting ? "hourglass" : "checkmark.seal.fill")
-                        .font(.system(size: 30)).foregroundStyle(waiting ? Color.secondary : Color.green)
-                    Text(waiting ? String(localized: "Đang tìm app rảnh", bundle: .main) : String(localized: "Không có gì cần tắt", bundle: .main)).font(.headline)
-                    Text(waiting ? String(localized: "Gợi ý có sau \(Format.number(monitor.thresholds.idleMinutes, digits: 0)) phút theo dõi.", bundle: .main)
-                                 : String(localized: "Không app nào rảnh lâu.", bundle: .main))
-                        .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                    Button("Mở Dọn RAM") { monitor.page = .freeRAM }.padding(.top, 4)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.vertical, 12)
-            }
-            ForEach(monitor.suggestions.prefix(5)) { g in
-                HStack(spacing: 10) {
-                    if case let .quitAll(u) = g.kind {
-                        CandidateIcon(u: u, size: 28)
-                    } else {
-                        GroupIcon(group: .claude, size: 28)
-                    }
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(g.title).lineLimit(1)
-                        Text(g.detail).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                    }
-                    Spacer()
-                    Text("-\(Format.bytes(g.freed))").monospacedDigit().foregroundStyle(.green)
-                }
-            }
-            if !monitor.suggestions.isEmpty {
-                HStack {
-                    Spacer()
-                    if monitor.suggestions.contains(where: { $0.kind == .archiveClaudeSessions }) {
-                        Button("Mở Claude") { monitor.openClaude() }
-                    }
-                    Button("Xem và tắt") { monitor.page = .freeRAM }.buttonStyle(PrimaryButtonStyle())
-                }
-            }
+    @ViewBuilder
+    private func statusChip(_ u: QuitCandidate) -> some View {
+        if u.blockedReason != nil {
+            StatusPill(owner: "Bảo vệ", color: .secondary)
+        } else if u.isFrontmost {
+            StatusPill(owner: "Đang dùng", color: .blue)
+        } else if let st = monitor.displayStatus(cpu: u.cpu, lastActive: u.lastActive) {
+            StatusPill(owner: LocalizedStringKey(st.0), color: st.1)
         }
-        .card()
     }
 
     private func metricColor(_ c: Metric, defaultValue: Color) -> Color {
@@ -321,10 +329,14 @@ struct MemoryPage: View {
     var body: some View {
         PageContainer {
             if let h = monitor.system, let budget = monitor.budget {
-                SectionTitle("Ngân sách RAM", subtitle: "Ước tính. Cập nhật \(Format.duration(Date().timeIntervalSince(monitor.processes.timestamp))) trước")
-                BudgetBar(budget: budget)
-                Text("Các app cần khoảng \(Format.bytes(budget.demand)) nếu không nén. Máy có \(Format.bytes(budget.totalRAM, digits: 0)).")
-                    .font(.callout).foregroundStyle(.secondary)
+                // The budget sits in a card like every other section.
+                VStack(alignment: .leading, spacing: 10) {
+                    SectionTitle("Ngân sách RAM", subtitle: monitor.processesAge.map { "Ước tính. Cập nhật \(Format.duration($0)) trước" } ?? "Ước tính")
+                    BudgetBar(budget: budget)
+                    Text("Ước tính tiến trình đọc được và RAM hệ thống giữ: \(Format.bytes(budget.demand)). Máy có \(Format.bytes(budget.totalRAM, digits: 0)). Không gồm mọi tiến trình hệ thống.")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+                .card()
 
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
                     StatBox(label: "Đã dùng", value: Format.bytes(h.memory.used), subtitle: "Trên \(Format.bytes(h.memory.total, digits: 0))")
@@ -350,7 +362,7 @@ struct MemoryPage: View {
                 Text("CPU").frame(width: 60, alignment: .trailing)
                 Text("Trạng thái").frame(width: 130, alignment: .trailing)
             }
-            .font(.caption).foregroundStyle(.secondary)
+            .font(.callout).foregroundStyle(.secondary)
             .padding(.horizontal, 10).padding(.vertical, 6)
             .background(Color.primary.opacity(0.04))
             ForEach(monitor.processes.groups) { n in
@@ -374,10 +386,10 @@ struct MemoryPage: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: expanded.contains(n.group) ? "chevron.down" : "chevron.right")
-                    .font(.caption2).foregroundStyle(.secondary).frame(width: 10)
+                    .font(.callout).foregroundStyle(.secondary).frame(width: 10)
                 GroupIcon(group: n.group, size: 20)
                 Text(n.group.name).fontWeight(.medium)
-                Text("\(n.processCount) tiến trình").font(.caption).foregroundStyle(.tertiary)
+                Text("\(n.processCount) tiến trình").font(.callout).foregroundStyle(.secondary)
                 Spacer()
                 Text(Format.bytes(n.footprint)).frame(width: 80, alignment: .trailing)
                 Text(Format.number(n.cpu, digits: 0) + Format.percentSign).frame(width: 60, alignment: .trailing).foregroundStyle(.secondary)

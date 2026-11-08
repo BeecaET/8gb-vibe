@@ -95,6 +95,14 @@ Tham số khi kiểm thử:
 "/Applications/8GB Vibe.app/Contents/MacOS/8GBVibe" --export-measurements ~/Desktop/8gb-do-luong.csv
 ```
 
+## Agent AI (MCP)
+
+`8GB Vibe.app/Contents/Helpers/8gbvibe-mcp` là MCP server qua stdio cho AI agent (Claude Code, Codex, Gemini, Antigravity, Cursor). Agent đọc trạng thái máy và phối hợp với nhau: `machine_status`, `heavy_processes`, `agent_sessions`, `hardware_profile`, `can_start` (lời khuyên trước việc nặng), `register_agent`, `heartbeat`, `acquire_slot`/`release_slot` (một chỗ việc nặng, có hạn giờ), `slots`, `post_message`/`read_messages`. Không tool nào tắt tiến trình, xoá tệp hay đổi cài đặt. Cài đặt > Agent AI chọn mức quyền và cài vào Claude Code sau khi xác nhận. Chi tiết: [docs/NGHIEN_CUU_MCP.md](docs/NGHIEN_CUU_MCP.md).
+
+```bash
+claude mcp add --transport stdio --scope user 8gbvibe -- "/Applications/8GB Vibe.app/Contents/Helpers/8gbvibe-mcp"
+```
+
 ## Ngôn ngữ
 
 App có tiếng Việt (gốc) và tiếng Anh. Mặc định theo ngôn ngữ của macOS; Cài đặt có ô Ngôn ngữ (Tự động, Tiếng Việt, English), đổi xong mở lại app.

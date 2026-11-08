@@ -32,6 +32,7 @@ struct ProcessesPage: View {
             TableColumn("CPU", value: \.cpu) { t in Text(Format.number(t.cpu, digits: 1) + Format.percentSign).monospacedDigit() }.width(60)
             TableColumn("PID", value: \.pidSort) { t in Text(verbatim: "\(t.pid)").monospacedDigit().foregroundStyle(.secondary) }.width(60)
         }
+        .tableStyle(.inset(alternatesRowBackgrounds: false))
         .contextMenu(forSelectionType: ProcessRow.ID.self) { ids in
             let selection = monitor.processes.processes.filter { ids.contains($0.id) && ProcessIdentity(pid: $0.pid, startDate: $0.startDate).canStop() }
             Button(selection.count == 1 ? String(localized: "Thoát \(selection[0].name)…", bundle: .main)
@@ -78,7 +79,7 @@ struct ProcessesPage: View {
                    : String(localized: "Thoát \(stoppable.count) tiến trình…", bundle: .main)) {
                 monitor.pendingConfirmation = stoppable.map { monitor.candidates(from: $0) }
             }
-            .buttonStyle(PrimaryButtonStyle())
+            .buttonStyle(.borderedProminent)
             .disabled(stoppable.isEmpty)
         }
         .font(.callout)
@@ -104,24 +105,24 @@ struct DiskPage: View {
                 // The bar shows the used part: accent color when fine, orange or red when nearly full (no green, so it does not read as "good").
                 let diskLevel = monitor.levels[.disk] ?? .ok
                 VStack(alignment: .leading, spacing: 6) {
-                    SectionTitle("Macintosh HD", subtitle: "Trống \(Format.bytes(h.disk.free, digits: 0)) / \(Format.bytes(h.disk.total, digits: 0))")
-                    ProgressView(value: h.disk.fullRatio).tint(diskLevel == .ok ? Color.accentColor : diskLevel.color)
-                    Text("Đã dùng \(Format.percent(h.disk.fullRatio))").font(.caption).foregroundStyle(.secondary)
+                    SectionTitle("Ổ chứa macOS", subtitle: "Trống \(Format.bytes(h.disk.free, digits: 0)) / \(Format.bytes(h.disk.total, digits: 0))")
+                    ProgressView(value: h.disk.fullRatio).tint(diskLevel == .ok ? Palette.tint : diskLevel.color)
+                    Text("Đã dùng \(Format.percent(h.disk.fullRatio))").font(.callout).foregroundStyle(.secondary)
                 }
                 .card()
             }
             HStack {
                 Text(monitor.scanningDisk ? String(localized: "Đang quét…", bundle: .main)
-                     : monitor.lastDiskScan.map { String(localized: "Quét lúc \($0.formatted(date: .omitted, time: .shortened))", bundle: .main) } ?? String(localized: "Chưa quét", bundle: .main))
-                    .font(.caption).foregroundStyle(.secondary)
+                     : monitor.lastDiskScan.map { String(localized: "Quét lúc \(LogPage.time($0))", bundle: .main) } ?? String(localized: "Chưa quét", bundle: .main))
+                    .font(.callout).foregroundStyle(.secondary)
                 Spacer()
                 if monitor.scanningDisk { ProgressView().controlSize(.small) }
                 Button(monitor.lastDiskScan == nil ? String(localized: "Quét", bundle: .main) : String(localized: "Quét lại", bundle: .main)) { monitor.scanDisk() }.disabled(monitor.scanningDisk)
             }
-            group(.safe, "Cache an toàn", "Tạo lại được tự động. Bản sau sẽ có nút dọn.")
+            group(.safe, "Cache có thể tạo lại", "Thường tạo lại hoặc tải lại được; lần chạy sau có thể lâu hơn. Nên đóng công cụ liên quan trước khi tự dọn.")
             group(.review, "Cần xem kỹ", "Có thể chứa dữ liệu còn dùng. Bạn tự quyết.")
-            group(.inApp, "Dữ liệu của app khác", "Dọn trong chính app đó.")
-            Text("App chỉ đo dung lượng. Không xoá gì.").font(.caption).foregroundStyle(.secondary)
+            group(.inApp, "Dữ liệu cần tự xem", "Dọn trong app tương ứng; thư mục Tải về xem bằng Finder.")
+            Text("App chỉ đo dung lượng. Không xoá gì.").font(.callout).foregroundStyle(.secondary)
         }
         .onAppear { if monitor.lastDiskScan == nil { monitor.scanDisk() } }
     }
@@ -131,18 +132,18 @@ struct DiskPage: View {
         let total = items.reduce(UInt64(0)) { $0 + ($1.bytes ?? 0) }
         return VStack(alignment: .leading, spacing: 0) {
             SectionTitle(name, subtitle: total > 0 ? "Tổng \(Format.bytes(total))" : nil).padding(.bottom, 2)
-            Text(summary).font(.caption).foregroundStyle(.secondary).padding(.bottom, 8)
+            Text(summary).font(.callout).foregroundStyle(.secondary).padding(.bottom, 8)
             VStack(spacing: 0) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { i, m in
                     if i > 0 { Divider() }
                     HStack(spacing: 10) {
                         VStack(alignment: .leading, spacing: 1) {
                             Text(m.name)
-                            Text(m.note).font(.caption).foregroundStyle(.secondary)
+                            Text(m.note).font(.callout).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Text(m.bytes.map { Format.bytes($0) } ?? (monitor.scanningDisk ? String(localized: "…", bundle: .main) : String(localized: "Không có", bundle: .main)))
-                            .monospacedDigit().foregroundStyle((m.bytes ?? 0) < 1 << 20 ? .tertiary : .primary)
+                        Text(m.bytes.map { Format.bytes($0) } ?? (monitor.scanningDisk ? String(localized: "…", bundle: .main) : String(localized: "Không có hoặc không đọc được", bundle: .main)))
+                            .monospacedDigit().foregroundStyle((m.bytes ?? 0) < 1 << 20 ? .secondary : .primary)
                         Button {
                             NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: m.path)])
                         } label: { Image(systemName: "magnifyingglass") }
@@ -168,7 +169,7 @@ struct BackgroundPage: View {
         PageContainer {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "info.circle").foregroundStyle(.secondary)
-                Text("Dịch vụ tự chạy khi khởi động máy. App chỉ xem, không tắt. Muốn tắt: Cài đặt hệ thống, Cài đặt chung, Mục đăng nhập.")
+                Text("Các cấu hình LaunchAgent/LaunchDaemon tìm thấy trên máy; không có nghĩa tất cả đang chạy. App chỉ xem. Bạn có thể kiểm tra thêm trong Cài đặt hệ thống > Cài đặt chung > Mục đăng nhập.")
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 8)
@@ -238,14 +239,14 @@ struct BackgroundItemRow: View {
                 let subtitle = name == m.label ? m.program : m.label
                 if !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.callout).foregroundStyle(.secondary)
                         .lineLimit(1).truncationMode(.middle)
                         .help(m.program)
                 }
             }
             Spacer(minLength: 8)
-            if m.runAtLoad { StatusPill(owner: "Khi khởi động", color: .secondary) }
-            if m.keepAlive { StatusPill(owner: "Luôn chạy", color: .orange) }
+            if m.runAtLoad { StatusPill(owner: "Khi được nạp", color: .secondary) }
+            if m.keepAlive { StatusPill(owner: "Có quy tắc giữ chạy", color: .orange) }
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
         .accessibilityElement(children: .combine)
@@ -253,98 +254,6 @@ struct BackgroundItemRow: View {
 }
 
 // MARK: Settings
-
-struct SettingsPage: View {
-    @EnvironmentObject var monitor: Monitor
-    @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
-    @State private var launchAtLoginError: String?
-    @State private var language = AppLanguage.current
-    private let launchLanguage = AppLanguage.current
-
-    var body: some View {
-        Form {
-            Section {
-                Picker("Ngôn ngữ", selection: $language) {
-                    ForEach(AppLanguage.allCases) { n in n.label.tag(n) }
-                }
-                .onChange(of: language) { $0.save() }
-                if language != launchLanguage {
-                    HStack {
-                        Text("Mở lại app để đổi ngôn ngữ.").foregroundStyle(.secondary)
-                        Spacer()
-                        Button("Mở lại") { AppLanguage.relaunch() }
-                    }
-                }
-            }
-            Section("Thanh menu") {
-                Picker("Hiển thị", selection: $monitor.menuBarStyle) {
-                    ForEach(MenuBarStyle.allCases) { Text($0.name).tag($0) }
-                }
-                Toggle("Mở cùng máy", isOn: $launchAtLogin)
-                    .onChange(of: launchAtLogin) { enabled in toggleLaunchAtLogin(enabled) }
-                if let launchAtLoginError { Text(launchAtLoginError).font(.caption).foregroundStyle(.red) }
-            }
-            Section("Thông báo") {
-                Toggle("Báo khi vượt ngưỡng", isOn: $monitor.sendNotifications)
-                Text("Mỗi chỉ số báo tối đa 30 phút một lần, chỉ khi mức độ tăng.").font(.caption).foregroundStyle(.secondary)
-            }
-            Section("Ngưỡng swap") {
-                row(.yellow, "Mức vàng", "\(Format.number(monitor.thresholds.swapYellowGB, digits: 0)) GB", $monitor.thresholds.swapYellowGB, 1...20, step: 1)
-                row(.red, "Mức đỏ", "\(Format.number(monitor.thresholds.swapRedGB, digits: 0)) GB", $monitor.thresholds.swapRedGB, 1...30, step: 1)
-            }
-            Section("Ngưỡng ổ trống") {
-                row(.yellow, "Vàng khi còn dưới", "\(Format.number(monitor.thresholds.diskFreeYellowGB, digits: 0)) GB", $monitor.thresholds.diskFreeYellowGB, 5...200, step: 5)
-                row(.red, "Đỏ khi còn dưới", "\(Format.number(monitor.thresholds.diskFreeRedGB, digits: 0)) GB", $monitor.thresholds.diskFreeRedGB, 5...100, step: 5)
-            }
-            Section {
-                row(.yellow, "Mức vàng", Format.number(monitor.thresholds.load5Yellow, digits: 0), $monitor.thresholds.load5Yellow, 4...100, step: 2)
-                row(.red, "Mức đỏ", Format.number(monitor.thresholds.load5Red, digits: 0), $monitor.thresholds.load5Red, 4...200, step: 2)
-            } header: {
-                Text("Ngưỡng tải CPU")
-            } footer: {
-                Text("Tải trung bình 5 phút. Máy có \(monitor.system?.coreCount ?? 8) nhân, tải bằng số nhân là đầy.")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            Section("Phiên Claude Code") {
-                row(.yellow, "Vàng khi trên", String(localized: "\(monitor.thresholds.sessionsYellow) phiên", bundle: .main), $monitor.thresholds.sessionsYellow, 1...50, step: 1)
-                row(.red, "Đỏ khi trên", String(localized: "\(monitor.thresholds.sessionsRed) phiên", bundle: .main), $monitor.thresholds.sessionsRed, 1...80, step: 1)
-                row(nil, "Coi là rảnh sau", String(localized: "\(Format.number(monitor.thresholds.idleMinutes, digits: 0)) phút", bundle: .main), $monitor.thresholds.idleMinutes, 5...240, step: 5)
-            }
-            Section {
-                Button("Khôi phục mặc định") { monitor.thresholds = Thresholds() }
-            }
-        }
-        .formStyle(.grouped)
-        .scrollContentBackground(.hidden)
-        // Limit the width like System Settings so rows do not stretch on a large window.
-        .frame(maxWidth: 680)
-        .frame(maxWidth: .infinity)
-    }
-
-    /// One threshold row: level dot, name, value with unit, stepper.
-    private func row<V: Strideable>(_ color: Color?, _ name: LocalizedStringKey, _ value: String,
-                                     _ b: Binding<V>, _ range: ClosedRange<V>, step: V.Stride) -> some View {
-        Stepper(value: b, in: range, step: step) {
-            HStack(spacing: 8) {
-                if let color { Circle().fill(color).frame(width: 8, height: 8).accessibilityHidden(true) }
-                Text(name)
-                Spacer()
-                Text(value).monospacedDigit().foregroundStyle(.secondary)
-            }
-        }
-        .accessibilityValue(value)
-    }
-
-    private func toggleLaunchAtLogin(_ enabled: Bool) {
-        do {
-            if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
-            launchAtLoginError = nil
-        } catch {
-            launchAtLoginError = String(localized: "Không đổi được: \(error.localizedDescription)", bundle: .main)
-            launchAtLogin = SMAppService.mainApp.status == .enabled
-        }
-    }
-}
 
 /// App language. Stored as AppleLanguages in the app's saved defaults (system settings are untouched). Needs a relaunch.
 enum AppLanguage: String, CaseIterable, Identifiable {

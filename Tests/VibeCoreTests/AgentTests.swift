@@ -25,6 +25,43 @@ final class AgentTests: XCTestCase {
         XCTAssertEqual(codex?.projectName, "shop")
     }
 
+    /// Codex bundled in ChatGPT.app (Contents/Resources/codex-cli): one "Codex" session per app, only the codex-cli
+    /// processes and their children; the app's own UI helpers stay with the app.
+    func testCodexInsideChatGPTApp() {
+        let base = "/Applications/ChatGPT.app/Contents"
+        let list = [
+            makeProcess(134, 1, "\(base)/MacOS/ChatGPT", fp: 300),
+            makeProcess(180, 134, "\(base)/Frameworks/Codex Framework.framework/Versions/1/Helpers/Codex (Aperitif Renderer).app/Contents/MacOS/Codex (Aperitif Renderer)", fp: 200),
+            makeProcess(229, 134, "\(base)/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex", startDate: 10, fp: 70,
+                        args: ["codex", "app-server"]),
+            makeProcess(5542, 229, "\(base)/Resources/codex-cli/bin/codex-code-mode-host", startDate: 30, fp: 10),
+            makeProcess(972, 134, "\(base)/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex", startDate: 20, fp: 20,
+                        args: ["codex", "exec-server"])
+        ]
+        let items = AgentSessionBuilder.from(list, cpu: [:], directory: { _ in nil }, lastActive: { _, _ in self.d0 })
+        XCTAssertEqual(items.count, 1)
+        XCTAssertEqual(items.first?.tool, "Codex")
+        XCTAssertEqual(items.first?.pid, 229)
+        XCTAssertEqual(items.first?.footprint, 100)
+        XCTAssertEqual(items.first?.hostApp, "/Applications/ChatGPT.app")
+        XCTAssertTrue(AgentSessionBuilder.isEmbeddedCodex("\(base)/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"))
+        XCTAssertFalse(AgentSessionBuilder.isEmbeddedCodex("/Applications/Codex.app/Contents/Resources/codex"))
+    }
+
+    /// The ChatGPT row does not count the embedded Codex twice, and Codex counts as an agent session.
+    func testChatGPTRowExcludesEmbeddedCodex() {
+        var result = ProcessSnapshot(timestamp: d0, processes: [], groups: [], sessions: [], readableTotal: 0, unreadableCount: 0)
+        result.apps = [AppUsage(app: RunningApp(pid: 134, bundleId: nil, name: "ChatGPT", bundlePath: "/Applications/ChatGPT.app", isFrontmost: false),
+                                footprint: 800, cpu: 0, processCount: 10, startDate: d0, lastActive: d0)]
+        result.agentSessions = [AgentSession(id: "e", pid: 229, tool: "Codex", directory: nil, footprint: 100, cpu: 0,
+                                             startDate: d0, lastActive: d0, hostApp: "/Applications/ChatGPT.app")]
+        let items = AIToolBuilder.from(result)
+        XCTAssertEqual(items.first { $0.name == "ChatGPT" }?.footprint, 700)
+        XCTAssertNotNil(items.first { $0.name == "ChatGPT" }?.note)
+        XCTAssertEqual(items.first { $0.name == "Codex" }?.kind, .cli)
+        XCTAssertEqual(items.flatMap(\.sessions).count, 1)
+    }
+
     func testCollectsTools() {
         let app = { (name: String, bundlePath: String, fp: UInt64) in
             AppUsage(app: RunningApp(pid: 1, bundleId: nil, name: name, bundlePath: bundlePath, isFrontmost: false),

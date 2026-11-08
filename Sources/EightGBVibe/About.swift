@@ -56,6 +56,7 @@ enum Product {
 
 /// About page in the main window.
 struct AboutPage: View {
+    @EnvironmentObject var monitor: Monitor
     var body: some View {
         PageContainer {
             VStack(spacing: 14) {
@@ -74,13 +75,16 @@ struct AboutPage: View {
                     .frame(maxWidth: 520)
                 HStack(spacing: 10) {
                     Link(destination: Product.website) { Label("8gb.beeca.vn", systemImage: "arrow.down.circle") }
-                        .buttonStyle(PrimaryButtonStyle())
+                        .buttonStyle(.borderedProminent)
                     Button { Product.openAboutPanel() } label: { Label("Bảng giới thiệu", systemImage: "info.circle") }
+                    Button { monitor.showWelcome = true } label: { Label("Xem lại hướng dẫn", systemImage: "hand.wave") }
                 }
                 .padding(.top, 4)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
+
+            MachineSummaryRow()
 
             VStack(alignment: .leading, spacing: 10) {
                 Label("Miễn phí 100%", systemImage: "gift").font(.headline)
@@ -99,9 +103,9 @@ struct AboutPage: View {
                 Label("An toàn", systemImage: "checkmark.shield").font(.headline)
                 VStack(alignment: .leading, spacing: 6) {
                     row("Không tự tắt, không tự xoá. Mọi lần thoát app đều cần bạn xác nhận.")
-                    row("Thoát chuẩn của macOS: app tự lưu trước khi đóng.")
+                    row("App có giao diện nhận lệnh thoát macOS; tiến trình nền nhận tín hiệu dừng. Hãy lưu việc trước.")
                     row("Không cho thoát Finder, Dock và app Claude từ 8GB Vibe.")
-                    row("Mọi hành động được ghi vào Nhật ký.")
+                    row("Kết quả đóng app, dừng tiến trình, cài/gỡ MCP và nhả chỗ việc nặng được ghi vào Nhật ký.")
                 }
             }
             .card()
@@ -119,7 +123,7 @@ struct AboutPage: View {
             .card()
 
             VStack(spacing: 8) {
-                Text("Một sản phẩm của").font(.caption).foregroundStyle(.secondary)
+                Text("Một sản phẩm của").font(.callout).foregroundStyle(.secondary)
                 if let logo = Product.logoBeeca {
                     Link(destination: Product.companyPage) {
                         Image(nsImage: logo).resizable().interpolation(.high).aspectRatio(contentMode: .fit).frame(height: 64)
@@ -129,7 +133,7 @@ struct AboutPage: View {
                 } else {
                     Link("BEECA", destination: Product.companyPage).font(.headline)
                 }
-                Text(Product.copyright).font(.caption).foregroundStyle(.tertiary)
+                Text(Product.copyright).font(.callout).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 8)
@@ -138,7 +142,7 @@ struct AboutPage: View {
 
     private func row(_ s: LocalizedStringKey) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Image(systemName: "checkmark").font(.caption.weight(.bold)).foregroundStyle(.green)
+            Image(systemName: "checkmark").font(.callout.weight(.bold)).foregroundStyle(.green)
             Text(s).foregroundStyle(.secondary)
         }
     }

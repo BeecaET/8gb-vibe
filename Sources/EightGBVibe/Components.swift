@@ -67,7 +67,7 @@ struct GaugeRing: View {
                     .monospacedDigit()
             }
             .frame(width: size, height: size)
-            Text(label).font(.caption).foregroundStyle(.secondary)
+            Text(label).font(.callout).foregroundStyle(.secondary)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(label) + Text(verbatim: ": \(value)"))
@@ -117,9 +117,9 @@ struct StatBox: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.caption).foregroundStyle(.secondary)
+            Text(label).font(.callout).foregroundStyle(.secondary)
             Text(value).font(.title3.weight(.medium)).monospacedDigit().foregroundStyle(color)
-            if let subtitle { Text(subtitle).font(.caption2).foregroundStyle(.tertiary) }
+            if let subtitle { Text(subtitle).font(.callout).foregroundStyle(.secondary) }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
@@ -169,14 +169,14 @@ struct BudgetBar: View {
             .frame(height: high)
             .clipShape(RoundedRectangle(cornerRadius: 4))
             HStack {
-                Text("0").font(.caption2).foregroundStyle(.tertiary)
+                Text("0").font(.callout).foregroundStyle(.secondary)
                 Spacer()
                 if budget.overflow > 0 {
                     Text("Vượt \(Format.bytes(budget.overflow)), phải nén hoặc đẩy xuống swap")
-                        .font(.caption2).foregroundStyle(.red)
+                        .font(.callout).foregroundStyle(.red)
                 }
                 Spacer()
-                Text("Vạch dọc: RAM máy \(Format.bytes(budget.totalRAM, digits: 0))").font(.caption2).foregroundStyle(.tertiary)
+                Text("Vạch dọc: RAM máy \(Format.bytes(budget.totalRAM, digits: 0))").font(.callout).foregroundStyle(.secondary)
             }
             legend.padding(.top, 4)
         }
@@ -203,7 +203,7 @@ struct BudgetBar: View {
             Text(name).lineLimit(1)
             Text(Format.bytes(byteCount)).monospacedDigit().foregroundStyle(.secondary)
         }
-        .font(.caption)
+        .font(.callout)
     }
 }
 

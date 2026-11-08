@@ -139,6 +139,27 @@ final class MeasurementStoreTests: XCTestCase {
         XCTAssertEqual(perms?.intValue, 0o600)
     }
 
+    func testOldHeaderUpgradedWhenAppending() throws {
+        let dir = temp()
+        let store = MeasurementStore(directory: dir)
+        let t = Date(timeIntervalSince1970: 1_800_000_000)
+        store.append(row(t))
+        let file = try XCTUnwrap(store.files().first)
+        // Simulate a file written by 1.1.1: 14-column header and a 14-field row.
+        let oldHeader = MinuteRow.header.split(separator: ",").prefix(14).joined(separator: ",")
+        let oldRow = row(t).csv.split(separator: ",", omittingEmptySubsequences: false).prefix(14).joined(separator: ",")
+        try Data((oldHeader + "\n" + oldRow + "\n").utf8).write(to: file)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
+
+        store.append(row(t.addingTimeInterval(60)))
+        let lines = try String(contentsOf: file, encoding: .utf8).split(separator: "\n")
+        XCTAssertEqual(lines.count, 3)
+        XCTAssertEqual(String(lines[0]), MinuteRow.header)
+        XCTAssertEqual(store.rows(since: t.addingTimeInterval(-1)).count, 2)
+        let perms = try FileManager.default.attributesOfItem(atPath: file.path)[.posixPermissions] as? NSNumber
+        XCTAssertEqual(perms?.intValue, 0o600)
+    }
+
     func testKeepsAtMostFourteenDays() {
         let store = MeasurementStore(directory: temp())
         let t = Date(timeIntervalSince1970: 1_800_000_000)
@@ -186,5 +207,42 @@ final class MeasurementLockTests: XCTestCase {
         XCTAssertTrue(a.rows(since: .distantPast).isEmpty)
         a.append(r)
         XCTAssertEqual(a.rows(since: .distantPast).count, 1)
+    }
+}
+
+final class ResponsivenessTests: XCTestCase {
+    func testProbeKeepsMaximaAndResets() {
+        let p = ResponsivenessProbe()
+        p.record(timer: 0.2)
+        p.record(timer: 1.5, main: 0.3)
+        p.record(main: 4.0)
+        let m = p.takeMinute()
+        XCTAssertEqual(m.timerLag, 1.5)
+        XCTAssertEqual(m.mainLag, 4.0)
+        XCTAssertEqual(p.takeMinute().mainLag, 0)
+    }
+
+    /// Rows written before the lag columns existed still load.
+    func testOldRowsStillParse() {
+        let old = "2027-01-15T08:00:00Z,1,1.5,0.0,10,5,0.0,6.25,82,2.00,0,,1,"
+        let r = MinuteRow(csv: old)
+        XCTAssertNotNil(r)
+        XCTAssertEqual(r?.mainLagMs, 0)
+        var new = r!
+        new.mainLagMs = 1234; new.timerLagMs = 56; new.sampleGapS = 21.5
+        XCTAssertEqual(MinuteRow(csv: new.csv), new)
+    }
+
+    func testRecorderRecordsSampleGap() {
+        let rec = MeasurementRecorder(store: nil)
+        let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+        let s = { (t: Date) in SystemSnapshot(timestamp: t, memory: Memory(total: 8 << 30, app: 0, wired: 0, compressed: 0, cache: 0, free: 0),
+                                              pressure: .normal, swap: Swap(total: 0, used: 0), disk: Disk(total: 0, free: 0),
+                                              load: LoadAverage(m1: 0, m5: 0, m15: 0), coreCount: 8) }
+        rec.addSystem(s(t0), counters: nil)
+        rec.addSystem(s(t0.addingTimeInterval(5)), counters: nil)
+        rec.addSystem(s(t0.addingTimeInterval(47)), counters: nil)   // the app stalled for 42 s
+        rec.addSystem(s(t0.addingTimeInterval(61)), counters: nil)
+        XCTAssertEqual(rec.rows.first?.sampleGapS, 42)
     }
 }

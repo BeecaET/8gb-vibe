@@ -3,7 +3,7 @@ import Foundation
 
 /// Identity of a process: pid plus start time (to the microsecond).
 /// A pid can be reused after a process exits, so the start time must also match before sending a signal.
-public struct ProcessIdentity: Sendable, Hashable {
+public struct ProcessIdentity: Sendable, Hashable, Codable {
     public var pid: Int32
     public var seconds: Int64
     public var microseconds: Int64
