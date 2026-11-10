@@ -6,7 +6,7 @@ BUNDLE_ID="vn.beeca.8gbvibe"
 VERSION="$(tr -d '[:space:]' < VERSION)"
 BUILD_NUMBER="$(git rev-list --count HEAD 2>/dev/null || echo 1)"
 # Vietnamese is the development language; English comes from Resources/en.lproj/InfoPlist.strings.
-COPYRIGHT="© 2026 BEECA. Mã nguồn theo Apache 2.0."
+COPYRIGHT="© 2026 BEECA. Source code licensed under Apache 2.0."  # English (development region); Vietnamese in Resources/vi.lproj/InfoPlist.strings
 
 # MCP server for AI agents, shipped in Contents/Helpers.
 MCP_NAME="8gbvibe-mcp"
@@ -44,7 +44,7 @@ make_bundle() {
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>
     <key>CFBundleVersion</key><string>$BUILD_NUMBER</string>
-    <key>CFBundleDevelopmentRegion</key><string>vi</string>
+    <key>CFBundleDevelopmentRegion</key><string>en</string>
     <key>CFBundleLocalizations</key><array><string>vi</string><string>en</string></array>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>LSUIElement</key><true/>
@@ -53,4 +53,10 @@ make_bundle() {
 </dict>
 </plist>
 PLIST
+}
+
+# forget_bundle <.app path>: removes a build copy from LaunchServices so Spotlight and Launchpad
+# show only the installed app (/Applications), not every build under build/.
+forget_bundle() {
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -u "$1" >/dev/null 2>&1 || true
 }

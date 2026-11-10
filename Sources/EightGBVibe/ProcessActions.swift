@@ -28,7 +28,7 @@ enum ActionLog {
             .appendingPathComponent("8GB Vibe", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
                                                  attributes: [.posixPermissions: 0o700])
-        return directory.appendingPathComponent("nhat-ky.jsonl")
+        return directory.appendingPathComponent(StoredName.logFile)
     }
 
     /// The log names the apps the user quit: owner-only (0600), like every other file of the app.
@@ -62,8 +62,40 @@ enum ActionLog {
         let dec = JSONDecoder()
         dec.dateDecodingStrategy = .iso8601
         return s.split(separator: "\n").suffix(maxCount).compactMap {
-            try? dec.decode(LogEntry.self, from: Data($0.utf8))
+            (try? dec.decode(LogEntry.self, from: Data($0.utf8))).map(normalized)
         }.reversed()
+    }
+
+    /// Outcomes that mean the target is gone or the action worked (shown in green, counted as freed RAM).
+    static let successOutcomes: Set<String> = ["Closed", "Done", "Slot released; no processes stopped"]
+
+    /// Versions before 1.2 stored the action and outcome as Vietnamese text. They are mapped to today's English
+    /// values when read, so old entries display, filter and count like new ones; the file itself is never rewritten.
+    /// Written as escapes so Sources/ stays free of Vietnamese text (the translations live in vi.lproj).
+    static let legacyValues: [String: String] = [
+        "Tho\u{E1}t": "Quit",
+        "D\u{1EEB}ng": "Stop",
+        "Bu\u{1ED9}c tho\u{E1}t": "Force Quit",
+        "Bu\u{1ED9}c d\u{1EEB}ng": "Force stop",
+        "C\u{E0}i MCP": "Install MCP",
+        "G\u{1EE1} MCP": "Remove MCP",
+        "Nh\u{1EA3} ch\u{1ED7} vi\u{1EC7}c n\u{1EB7}ng": "Release heavy-job slot",
+        "\u{110}o sau khi d\u{1ECD}n": "Measure after cleanup",
+        "\u{110}\u{E3} tho\u{E1}t": "Closed",
+        "Ch\u{1B0}a tho\u{E1}t": "Still running",
+        "Xong": "Done",
+        "L\u{1ED7}i": "Error",
+        "Kh\u{F4}ng \u{111}o \u{111}\u{1B0}\u{1EE3}c": "Could not measure",
+        "\u{110}o sau 10 gi\u{E2}y": "Measured after 10 seconds",
+        "Nh\u{1EA3} ch\u{1ED7} xong, kh\u{F4}ng d\u{1EEB}ng ti\u{1EBF}n tr\u{EC}nh": "Slot released; no processes stopped",
+        "Ch\u{1ED7} \u{111}\u{E3} kh\u{F4}ng c\u{F2}n": "Slot no longer exists",
+    ]
+
+    static func normalized(_ e: LogEntry) -> LogEntry {
+        var e = e
+        e.action = legacyValues[e.action] ?? e.action
+        e.outcome = legacyValues[e.outcome] ?? e.outcome
+        return e
     }
 }
 

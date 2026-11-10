@@ -38,7 +38,7 @@ struct PopoverContent: View {
                 metric(h).padding(.top, 12)
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        Text("Swap · lịch sử gần đây").font(.callout.weight(.medium)).foregroundStyle(.secondary)
+                        Text("Swap · recent history").font(.callout.weight(.medium)).foregroundStyle(.secondary)
                         Spacer()
                         Text(Format.bytes(h.swap.used)).font(.callout).monospacedDigit().foregroundStyle(.secondary)
                     }
@@ -72,8 +72,8 @@ struct PopoverContent: View {
             Spacer(minLength: 0)
             Button { openPalette() } label: { KeyHint("⌘K") }
                 .buttonStyle(.plain)
-                .help("Tìm hoặc ra lệnh")
-                .accessibilityLabel("Mở bảng lệnh")
+                .help("Search or run a command")
+                .accessibilityLabel("Open command palette")
         }
     }
 
@@ -85,9 +85,9 @@ struct PopoverContent: View {
             // Every agent session (Claude Code, Codex, Gemini...), counted like the AI Agents page and MCP.
             let sessions = AIToolBuilder.from(monitor.processes).flatMap(\.sessions).count
             VStack(alignment: .leading, spacing: 5) {
-                Text("Phiên AI").font(.callout).foregroundStyle(.secondary)
+                Text("AI sessions").font(.callout).foregroundStyle(.secondary)
                 Text("\(sessions)").font(.system(size: 15, weight: .semibold, design: .rounded)).monospacedDigit()
-                Text("Đang mở").font(.callout).foregroundStyle(.secondary)
+                Text("Open").font(.callout).foregroundStyle(.secondary)
             }
             .padding(10).frame(maxWidth: .infinity, alignment: .leading)
             .background(RoundedRectangle(cornerRadius: 10).fill(Color.primary.opacity(0.05)))
@@ -116,7 +116,7 @@ struct PopoverContent: View {
     private var topApp: some View {
         let items = monitor.processes.groups.flatMap(\.items).sorted { $0.footprint > $1.footprint }.prefix(4)
         return VStack(alignment: .leading, spacing: 8) {
-            Text("Dùng nhiều RAM nhất").font(.callout.weight(.medium)).foregroundStyle(.secondary)
+            Text("Top RAM users").font(.callout.weight(.medium)).foregroundStyle(.secondary)
             ForEach(Array(items)) { item in
                 let u = monitor.candidates.first { $0.name == item.name }
                 HStack(spacing: 10) {
@@ -125,8 +125,8 @@ struct PopoverContent: View {
                     // Anything that cannot be quit from here (protected app, VM, system, agent sessions) shows a lock.
                     if u == nil || u?.blockedReason != nil {
                         Image(systemName: "lock.fill").font(.callout).foregroundStyle(.tertiary)
-                            .help(u?.blockedReason ?? String(localized: "Không đóng từ đây", bundle: .main))
-                            .accessibilityLabel("Không đóng từ đây")
+                            .help(u?.blockedReason ?? String(localized: "Not quit from here", bundle: .main))
+                            .accessibilityLabel("Not quit from here")
                     }
                     Spacer()
                     Text(Format.bytes(item.footprint)).monospacedDigit().foregroundStyle(.secondary)
@@ -136,7 +136,7 @@ struct PopoverContent: View {
                             open(.freeRAM)
                         } label: { Image(systemName: "xmark.circle") }
                             .buttonStyle(.borderless).foregroundStyle(.secondary)
-                            .help("Đóng \(u.name)… (sẽ hỏi lại)").accessibilityLabel("Đóng \(u.name)")
+                            .help("Close \(u.name)… (asks first)").accessibilityLabel("Close \(u.name)")
                     }
                 }
                 .font(.callout)
@@ -146,16 +146,16 @@ struct PopoverContent: View {
 
     private var footer: some View {
         HStack(spacing: 14) {
-            Button { open(monitor.page) } label: { Label("Mở \(Product.name)", systemImage: "macwindow") }
+            Button { open(monitor.page) } label: { Label("Open \(Product.name)", systemImage: "macwindow") }
                 .keyboardShortcut("1")
             Spacer()
             Button { open(.about) } label: { Image(systemName: "info.circle") }
-                .help("Giới thiệu \(Product.name)").accessibilityLabel("Giới thiệu \(Product.name)")
+                .help("About \(Product.name)").accessibilityLabel("About \(Product.name)")
             Button { open(.settings) } label: { Image(systemName: "gearshape") }
-                .help("Cài đặt").accessibilityLabel("Cài đặt")
+                .help("Settings").accessibilityLabel("Settings")
             Button { NSApp.terminate(nil) } label: { Image(systemName: "power") }
                 .keyboardShortcut("q")
-                .help("Thoát \(Product.name)").accessibilityLabel("Thoát \(Product.name)")
+                .help("Quit \(Product.name)").accessibilityLabel("Quit \(Product.name)")
         }
         .buttonStyle(.borderless)
         .font(.callout)
@@ -169,14 +169,14 @@ struct PopoverContent: View {
 
     /// Opens the main window with the command palette showing.
     private func openPalette() {
-        openWindow(id: "chinh")
+        openWindow(id: StoredName.mainWindow)
         NSApp.activate(ignoringOtherApps: true)
         monitor.showPalette = true
     }
 
     private func open(_ page: Page) {
         monitor.page = page
-        openWindow(id: "chinh")
+        openWindow(id: StoredName.mainWindow)
         NSApp.activate(ignoringOtherApps: true)
     }
 }

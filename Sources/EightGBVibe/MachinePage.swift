@@ -54,7 +54,7 @@ struct MachinePage: View {
                 Text(heroLine).font(.title3).foregroundStyle(.secondary)
                 HStack(spacing: 8) {
                     StatusPill(owner: LocalizedStringKey(p.name), color: Palette.tint)
-                    if p.tier != .gb8 { StatusPill(owner: "thử nghiệm", color: .orange) }
+                    if p.tier != .gb8 { StatusPill(owner: "experimental", color: .orange) }
                     if let y = h.modelYear { Text(verbatim: String(y)).font(.callout).foregroundStyle(.secondary) }
                 }
             }
@@ -84,23 +84,23 @@ struct MachinePage: View {
     private var summaryCards: some View {
         let h = monitor.hardware
         return LazyVGrid(columns: [GridItem(.adaptive(minimum: 160), spacing: 12, alignment: .top)], spacing: 12) {
-            summary("cpu", "Chip", value: String(localized: "\(h.totalCores) nhân", bundle: .main),
-                    detail: h.gpuCores.map { String(localized: "\($0) nhân GPU", bundle: .main) }
-                        ?? (h.appleSilicon ? String(localized: "\(h.performanceCores) hiệu năng, \(h.efficiencyCores) tiết kiệm", bundle: .main) : h.chip),
+            summary("cpu", "Chip", value: String(localized: "\(h.totalCores) cores", bundle: .main),
+                    detail: h.gpuCores.map { String(localized: "\($0) GPU cores", bundle: .main) }
+                        ?? (h.appleSilicon ? String(localized: "\(h.performanceCores) performance, \(h.efficiencyCores) efficiency", bundle: .main) : h.chip),
                     ratio: nil)
             if let s = monitor.system {
-                summary("memorychip", "Bộ nhớ", value: "\(h.ramGB) GB",
-                        detail: String(localized: "Đang dùng \(Format.percent(s.memory.usedRatio))", bundle: .main),
+                summary("memorychip", "Memory", value: "\(h.ramGB) GB",
+                        detail: String(localized: "\(Format.percent(s.memory.usedRatio)) in use", bundle: .main),
                         ratio: s.memory.usedRatio)
             } else {
-                summary("memorychip", "Bộ nhớ", value: "\(h.ramGB) GB", detail: h.memoryType, ratio: nil)
+                summary("memorychip", "Memory", value: "\(h.ramGB) GB", detail: h.memoryType, ratio: nil)
             }
-            summary("internaldrive", "Ổ đĩa", value: h.diskBytes > 0 ? Format.bytes(h.diskBytes, digits: 0) : "-",
-                    detail: live?.diskFree.map { String(localized: "Còn trống \(Format.bytes($0))", bundle: .main) },
+            summary("internaldrive", "Disk", value: h.diskBytes > 0 ? Format.bytes(h.diskBytes, digits: 0) : "-",
+                    detail: live?.diskFree.map { String(localized: "\(Format.bytes($0)) free", bundle: .main) },
                     ratio: diskRatio)
             if let b = live?.battery {
-                summary("battery.100percent", "Dung lượng tối đa của pin", value: b.capacityPercent.map { "\($0)%" } ?? "-",
-                        detail: b.cycleCount.map { String(localized: "\($0) lần sạc", bundle: .main) },
+                summary("battery.100percent", "Maximum battery capacity", value: b.capacityPercent.map { "\($0)%" } ?? "-",
+                        detail: b.cycleCount.map { String(localized: "\($0) cycles", bundle: .main) },
                         ratio: nil)
             }
         }
@@ -117,7 +117,7 @@ struct MachinePage: View {
         VStack(alignment: .leading, spacing: 6) {
             Label(title, systemImage: symbol).font(.callout).foregroundStyle(.secondary)
             Text(value).font(.title2.weight(.semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.8)
-            Text(detail ?? String(localized: "Không đọc được", bundle: .main))
+            Text(detail ?? String(localized: "Not readable", bundle: .main))
                 .font(.callout).foregroundStyle(.secondary).lineLimit(1)
             if let ratio {
                 ProgressView(value: ratio).progressViewStyle(.linear)
@@ -137,18 +137,18 @@ struct MachinePage: View {
     private var memoryCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Bộ nhớ").font(.headline)
+                Text("Memory").font(.headline)
                 Spacer()
                 if let s = monitor.system {
-                    Text("Swap đang dùng \(Format.bytes(s.swap.used))").font(.callout)
+                    Text("Swap in use \(Format.bytes(s.swap.used))").font(.callout)
                         .foregroundStyle(s.swap.used > 0 ? Color.orange : Color.secondary)
                 }
             }
             if let s = monitor.system {
                 let m = s.memory
                 let parts: [(LocalizedStringKey, UInt64, Color)] = [
-                    ("Ứng dụng", m.app, .blue), ("Nén", m.compressed, .purple),
-                    ("Wired", m.wired, .gray), ("Trống", m.total > m.used ? m.total - m.used : 0, Color.primary.opacity(0.12)),
+                    ("App", m.app, .blue), ("Compressed", m.compressed, .purple),
+                    ("Wired", m.wired, .gray), ("Free", m.total > m.used ? m.total - m.used : 0, Color.primary.opacity(0.12)),
                 ]
                 GeometryReader { geo in
                     HStack(spacing: 2) {
@@ -173,11 +173,11 @@ struct MachinePage: View {
                 }
                 .fixedSize(horizontal: false, vertical: true)
                 if monitor.hardware.appleSilicon {
-                    Text("\(monitor.hardware.ramGB) GB \(monitor.hardware.memoryType ?? ""), dùng chung cho CPU và GPU.")
+                    Text("\(monitor.hardware.ramGB) GB \(monitor.hardware.memoryType ?? ""), shared by the CPU and GPU.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
             } else {
-                Text("Đang đọc...").foregroundStyle(.secondary)
+                Text("Reading...").foregroundStyle(.secondary)
             }
         }
         .card()
@@ -189,25 +189,25 @@ struct MachinePage: View {
         let h = monitor.hardware
         return detailCard("Chip", symbol: "cpu") {
             row("Chip", h.chip)
-            row("Nhân CPU", h.appleSilicon
-                ? String(localized: "\(h.totalCores) nhân: \(h.performanceCores) hiệu năng, \(h.efficiencyCores) tiết kiệm", bundle: .main)
-                : String(localized: "\(h.totalCores) nhân", bundle: .main))
-            row("Nhân GPU", h.gpuCores.map(String.init))
-            row("Kiến trúc", h.architecture)
-            row("Mã model", h.model)
+            row("CPU cores", h.appleSilicon
+                ? String(localized: "\(h.totalCores) cores: \(h.performanceCores) performance, \(h.efficiencyCores) efficiency", bundle: .main)
+                : String(localized: "\(h.totalCores) cores", bundle: .main))
+            row("GPU cores", h.gpuCores.map(String.init))
+            row("Architecture", h.architecture)
+            row("Model identifier", h.model)
         }
     }
 
     private var diskCard: some View {
         let h = monitor.hardware
-        return detailCard("Ổ đĩa", symbol: "internaldrive") {
-            row("Dung lượng", h.diskBytes > 0 ? Format.bytes(h.diskBytes, digits: 0) : nil)
-            row("Còn trống", live?.diskFree.map { Format.bytes($0) })
-            row("Định dạng", h.diskFormat.isEmpty ? nil : h.diskFormat)
-            row("Vị trí", h.diskInternal ? String(localized: "Ổ trong", bundle: .main) : String(localized: "Ổ ngoài", bundle: .main))
-            row("Ổ", [h.diskModel, h.diskMedium].compactMap { $0 }.joined(separator: ", ").nilIfEmpty)
+        return detailCard("Disk", symbol: "internaldrive") {
+            row("Capacity", h.diskBytes > 0 ? Format.bytes(h.diskBytes, digits: 0) : nil)
+            row("Available", live?.diskFree.map { Format.bytes($0) })
+            row("Format", h.diskFormat.isEmpty ? nil : h.diskFormat)
+            row("Location", h.diskInternal ? String(localized: "Internal drive", bundle: .main) : String(localized: "External drive", bundle: .main))
+            row("Drive", [h.diskModel, h.diskMedium].compactMap { $0 }.joined(separator: ", ").nilIfEmpty)
             if h.smartCapable == true {
-                Text("SMART: ổ có hỗ trợ. Tình trạng cần công cụ khác để đọc, app không đọc.")
+                Text("SMART: supported by the drive. Reading its status needs another tool; the app does not read it.")
                     .font(.callout).foregroundStyle(.secondary)
             }
         }
@@ -215,36 +215,36 @@ struct MachinePage: View {
 
     private var batteryCard: some View {
         let b = live?.battery
-        return detailCard("Pin", symbol: "battery.100percent") {
-            row("Tình trạng", b?.health)
-            row("Số lần sạc", b?.cycleCount.map { c in b?.designCycles.map { String(localized: "\(c) / \($0) lần theo thiết kế", bundle: .main) } ?? "\(c)" })
-            row("Dung lượng tối đa", b?.capacityPercent.map { pct in
-                String(localized: "\(pct)% so với thiết kế (\(b?.fullChargeCapacity ?? 0) / \(b?.designCapacity ?? 0) mAh)", bundle: .main) })
-            row("Mức pin", b?.chargePercent.map { "\($0)%" })
-            row("Đang sạc", b?.isCharging.map { $0 ? String(localized: "Có", bundle: .main) : String(localized: "Không", bundle: .main) })
-            row("Nguồn điện", b?.onAC.map { $0 ? String(localized: "Bộ sạc", bundle: .main) : String(localized: "Pin", bundle: .main) })
+        return detailCard("Battery", symbol: "battery.100percent") {
+            row("Condition", b?.health)
+            row("Cycle count", b?.cycleCount.map { c in b?.designCycles.map { String(localized: "\(c) / \($0) design cycles", bundle: .main) } ?? "\(c)" })
+            row("Maximum capacity", b?.capacityPercent.map { pct in
+                String(localized: "\(pct)% of design (\(b?.fullChargeCapacity ?? 0) / \(b?.designCapacity ?? 0) mAh)", bundle: .main) })
+            row("Charge", b?.chargePercent.map { "\($0)%" })
+            row("Charging", b?.isCharging.map { $0 ? String(localized: "Yes", bundle: .main) : String(localized: "No room", bundle: .main) })
+            row("Power source", b?.onAC.map { $0 ? String(localized: "Power adapter", bundle: .main) : String(localized: "Battery", bundle: .main) })
         }
     }
 
     private var displayCard: some View {
-        detailCard("Màn hình", symbol: "display") {
+        detailCard("Displays", symbol: "display") {
             if let ds = live?.displays, !ds.isEmpty {
                 ForEach(Array(ds.enumerated()), id: \.offset) { _, d in
-                    row(d.builtIn ? "Màn hình tích hợp" : "Màn hình ngoài", displayText(d))
+                    row(d.builtIn ? "Built-in display" : "External display", displayText(d))
                 }
             } else {
-                row("Số màn hình", live == nil ? String(localized: "Đang đọc...", bundle: .main) : nil)
+                row("Number of displays", live == nil ? String(localized: "Reading...", bundle: .main) : nil)
             }
         }
     }
 
     private var systemCard: some View {
         let h = monitor.hardware
-        return detailCard("Hệ thống", symbol: "apple.logo") {
+        return detailCard("System", symbol: "apple.logo") {
             row("macOS", [h.macOSFull ?? h.macOSVersion, h.macOSBuild.map { "(\($0))" }].compactMap { $0 }.joined(separator: " "))
-            row("Đã chạy", live?.uptime.map { Format.duration($0) })
-            row("Nhiệt", live.map { thermalText($0.thermal) })
-            row("Chế độ Nguồn điện thấp", live.map { $0.lowPowerMode ? String(localized: "Bật", bundle: .main) : String(localized: "Tắt", bundle: .main) })
+            row("Uptime", live?.uptime.map { Format.duration($0) })
+            row("Thermal state", live.map { thermalText($0.thermal) })
+            row("Low Power Mode", live.map { $0.lowPowerMode ? String(localized: "On", bundle: .main) : String(localized: "Off", bundle: .main) })
         }
     }
 
@@ -253,7 +253,7 @@ struct MachinePage: View {
     private var toolsCard: some View {
         let h = monitor.hardware
         return VStack(alignment: .leading, spacing: 12) {
-            Label("Công cụ phát triển", systemImage: "hammer").font(.headline)
+            Label("Developer tools", systemImage: "hammer").font(.headline)
             if let tools = h.toolDetails, !tools.isEmpty {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 200), spacing: 10, alignment: .leading)], alignment: .leading, spacing: 10) {
                     ForEach(tools, id: \.name) { t in
@@ -261,7 +261,7 @@ struct MachinePage: View {
                             IconApp(path: t.path, size: 32)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(LocalizedStringKey(t.name)).lineLimit(1)
-                                Text(t.version ?? String(localized: "có, không rõ phiên bản", bundle: .main))
+                                Text(t.version ?? String(localized: "present, version unknown", bundle: .main))
                                     .font(.callout).foregroundStyle(.secondary).lineLimit(1)
                             }
                             Spacer(minLength: 0)
@@ -272,7 +272,7 @@ struct MachinePage: View {
                     }
                 }
             } else {
-                Text(h.toolDetails == nil ? "Bấm Quét lại để đọc." : "Không thấy Xcode, Docker, OrbStack, Android Studio.")
+                Text(h.toolDetails == nil ? "Click Rescan to read." : "No Xcode, Docker, OrbStack or Android Studio found.")
                     .foregroundStyle(.secondary)
             }
         }
@@ -285,22 +285,22 @@ struct MachinePage: View {
         let p = monitor.profile
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Label("Hồ sơ tối ưu", systemImage: "slider.horizontal.3").font(.headline)
+                Label("Optimization profile", systemImage: "slider.horizontal.3").font(.headline)
                 StatusPill(owner: LocalizedStringKey(p.name), color: Palette.tint)
-                if p.tier != .gb8 { StatusPill(owner: "thử nghiệm", color: .orange) }
+                if p.tier != .gb8 { StatusPill(owner: "experimental", color: .orange) }
                 Spacer()
             }
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 8) {
-                gridRow("Swap vàng / đỏ", "\(Format.number(p.thresholds.swapYellowGB, digits: 0)) / \(Format.number(p.thresholds.swapRedGB, digits: 0)) GB")
-                gridRow("Phiên agent khuyên dưới / báo đỏ", "\(p.thresholds.sessionsYellow) / \(p.thresholds.sessionsRed)")
-                gridRow("Tải CPU 5 phút vàng / đỏ", "\(Format.number(p.thresholds.load5Yellow, digits: 0)) / \(Format.number(p.thresholds.load5Red, digits: 0))")
-                gridRow("RAM chừa cho hệ thống", Format.bytes(p.headroomReserve, digits: 1))
-                gridRow("Báo \"Swap đang rất nặng\" từ", String(localized: "\(Format.number(p.freezeSevereMBPerMin / 1024, digits: 1)) GB mỗi phút", bundle: .main))
-                gridRow("Quét tiến trình khi chạy nền", String(localized: "mỗi \(Int(p.backgroundScanSeconds)) giây", bundle: .main))
+                gridRow("Swap yellow / red", "\(Format.number(p.thresholds.swapYellowGB, digits: 0)) / \(Format.number(p.thresholds.swapRedGB, digits: 0)) GB")
+                gridRow("Agent sessions: keep under / red at", "\(p.thresholds.sessionsYellow) / \(p.thresholds.sessionsRed)")
+                gridRow("5-minute CPU load yellow / red", "\(Format.number(p.thresholds.load5Yellow, digits: 0)) / \(Format.number(p.thresholds.load5Red, digits: 0))")
+                gridRow("RAM kept for the system", Format.bytes(p.headroomReserve, digits: 1))
+                gridRow("\"Swap is very heavy\" from", String(localized: "\(Format.number(p.freezeSevereMBPerMin / 1024, digits: 1)) GB per minute", bundle: .main))
+                gridRow("Process scan in background", String(localized: "every \(Int(p.backgroundScanSeconds)) seconds", bundle: .main))
             }
             Text(p.tier == .gb8
-                 ? "Mặc định cho máy 8 GB. Giá trị bạn đã tự chỉnh trong Cài đặt được giữ nguyên."
-                 : "Giá trị cho máy 16 GB và 24 GB trở lên là thử nghiệm (ước tính, chưa đo). Giá trị bạn đã tự chỉnh trong Cài đặt được giữ nguyên.")
+                 ? "Defaults for 8 GB Macs. Values you changed in Settings are kept."
+                 : "Values for 16 GB and 24 GB or more are experimental (estimates, not measured). Values you changed in Settings are kept.")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
         .card()
@@ -318,11 +318,11 @@ struct MachinePage: View {
         return VStack(alignment: .leading, spacing: 6) {
             if let notice = monitor.hardwareNotice { Text(notice).foregroundStyle(.green) }
             HStack {
-                Text("Quét lúc \(Self.date.string(from: h.scannedAt))").foregroundStyle(.secondary)
+                Text("Scanned at \(Self.date.string(from: h.scannedAt))").foregroundStyle(.secondary)
                 Spacer()
-                Button("Quét lại") { monitor.rescanHardware() }
+                Button("Rescan") { monitor.rescanHardware() }
             }
-            Text("Chỉ đọc thông tin trên máy, không gửi đi đâu. Không đọc số serial. Thông tin tĩnh lưu ở hardware.json (chỉ bạn đọc được); số đang chạy không lưu.")
+            Text("Only reads information on this Mac and sends nothing anywhere. Serial numbers are not read. Static details are saved in hardware.json (readable only by you); live values are not saved.")
                 .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -338,7 +338,7 @@ struct MachinePage: View {
         .card()
     }
 
-    /// One row; a missing value reads "Không đọc được" in secondary text (never a guess, never loud).
+    /// One row; a missing value reads "Unreadable" in secondary text (never a guess, never loud).
     private func row(_ label: LocalizedStringKey, _ value: String?) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             Text(label).foregroundStyle(.secondary)
@@ -346,26 +346,26 @@ struct MachinePage: View {
             if let value {
                 Text(value).textSelection(.enabled).multilineTextAlignment(.trailing)
             } else {
-                Text("Không đọc được").foregroundStyle(.secondary)
+                Text("Not readable").foregroundStyle(.secondary)
             }
         }
     }
 
     private func displayText(_ d: DisplayInfo) -> String {
-        let size = String(localized: "\(d.pixelWidth) x \(d.pixelHeight) điểm ảnh, hiển thị như \(d.width) x \(d.height)", bundle: .main)
+        let size = String(localized: "\(d.pixelWidth) x \(d.pixelHeight) pixels, looks like \(d.width) x \(d.height)", bundle: .main)
         let hz: String
         if let r = d.refreshHz { hz = String(localized: "\(Int(r.rounded())) Hz", bundle: .main) }
-        else { hz = String(localized: "tần số không đọc được", bundle: .main) }
+        else { hz = String(localized: "refresh rate not readable", bundle: .main) }
         return size + ", " + hz
     }
 
     private func thermalText(_ s: String) -> String {
         switch s {
-        case "nominal": return String(localized: "Bình thường", bundle: .main)
-        case "fair": return String(localized: "Hơi nóng", bundle: .main)
-        case "serious": return String(localized: "Nóng, máy có thể giảm tốc", bundle: .main)
-        case "critical": return String(localized: "Rất nóng, hiệu năng có thể bị giới hạn", bundle: .main)
-        default: return String(localized: "Không đọc được", bundle: .main)
+        case "nominal": return String(localized: "Normal", bundle: .main)
+        case "fair": return String(localized: "Slightly warm", bundle: .main)
+        case "serious": return String(localized: "Hot, the Mac may slow down", bundle: .main)
+        case "critical": return String(localized: "Very hot; performance may be limited", bundle: .main)
+        default: return String(localized: "Not readable", bundle: .main)
         }
     }
 }
@@ -382,7 +382,7 @@ struct MachineSummaryRow: View {
         HStack {
             Label(monitor.hardware.summary, systemImage: "laptopcomputer")
             Spacer()
-            Button("Xem cấu hình máy") { monitor.page = .machine }
+            Button("View Mac details") { monitor.page = .machine }
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)

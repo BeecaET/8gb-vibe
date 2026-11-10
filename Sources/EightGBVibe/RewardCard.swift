@@ -42,36 +42,36 @@ struct RewardCard: View {
             .frame(width: 44, height: 44)
             .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Ước tính theo app").font(.callout).foregroundStyle(.secondary)
+                Text("Estimated from the apps").font(.callout).foregroundStyle(.secondary)
                 CountUpBytes(value: shown ? Double(summary.bytes) : 0)
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                 // Facts only: how many closed; the measured effect comes 10 seconds later.
-                Text(summary.count == 1 ? String(localized: "Đã đóng 1 mục.", bundle: .main)
-                                        : String(localized: "Đã đóng \(summary.count) mục.", bundle: .main))
+                Text(summary.count == 1 ? String(localized: "Closed 1 item.", bundle: .main)
+                                        : String(localized: "Closed \(summary.count) items.", bundle: .main))
                     .font(.callout)
                 if summary.failed > 0 {
                     HStack(spacing: 6) {
-                        Label(summary.failed == 1 ? String(localized: "1 mục chưa thoát", bundle: .main)
-                                                  : String(localized: "\(summary.failed) mục chưa thoát", bundle: .main),
+                        Label(summary.failed == 1 ? String(localized: "1 item did not quit", bundle: .main)
+                                                  : String(localized: "\(summary.failed) items did not quit", bundle: .main),
                               systemImage: "exclamationmark.circle.fill")
                             .foregroundStyle(.orange)
                         if let openLog {
-                            Button("Xem Nhật ký") { openLog() }.buttonStyle(.link)
+                            Button("View Log") { openLog() }.buttonStyle(.link)
                         }
                     }
                     .font(.callout)
                 }
                 Group {
                     if let m = summary.measured {
-                        Text("Thay đổi sau khi đóng: RAM giảm \(Self.signed(m.ram)), swap giảm \(Self.signed(m.swap)). Số âm là tăng; có thể lẫn hoạt động khác.")
+                        Text("Change after closing: RAM down \(Self.signed(m.ram)), swap down \(Self.signed(m.swap)). Negative means an increase; other activity may contribute.")
                     } else if summary.measuring {
-                        Text("Đang đo lại RAM và swap sau 10 giây...")
+                        Text("Measuring RAM and swap again after 10 seconds...")
                     }
                 }
                 .font(.callout).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
                 if week.count > 1 {
-                    Text("7 ngày qua, RAM các mục đã đóng (ước tính): \(Format.bytes(week.bytes)) qua \(week.count) mục.")
+                    Text("Last 7 days, closed items’ memory (estimate): \(Format.bytes(week.bytes)) across \(week.count) items.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
             }
@@ -79,8 +79,8 @@ struct RewardCard: View {
             Button(action: close) { Image(systemName: "xmark") }
                 .buttonStyle(.borderless)
                 .foregroundStyle(.secondary)
-                .help("Đóng")
-                .accessibilityLabel("Đóng")
+                .help("Close")
+                .accessibilityLabel("Close")
         }
         .padding(16)
         .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -104,8 +104,8 @@ struct RewardCard: View {
     static func weekTotal(now: Date = Date()) -> (bytes: UInt64, count: Int) {
         let since = now.addingTimeInterval(-7 * 24 * 3600)
         // Only quits and stops count (not MCP installs, slot releases or measurements).
-        let quits: Set<String> = ["Thoát", "Dừng", "Buộc thoát", "Buộc dừng"]
-        let done = ActionLog.read().filter { $0.timestamp >= since && quits.contains($0.action) && $0.outcome.hasPrefix("Đã") }
+        let quits: Set<String> = ["Quit", "Stop", "Force Quit", "Force stop"]
+        let done = ActionLog.read().filter { $0.timestamp >= since && quits.contains($0.action) && $0.outcome == "Closed" }
         return (done.reduce(0) { $0 + $1.freed }, done.count)
     }
 }

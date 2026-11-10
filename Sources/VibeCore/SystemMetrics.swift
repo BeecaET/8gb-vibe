@@ -47,9 +47,9 @@ public enum MemoryPressure: Int, Comparable, Sendable {
 
     public var name: String {
         switch self {
-        case .normal: return String(localized: "Bình thường", bundle: .main)
-        case .warning: return String(localized: "Cảnh báo", bundle: .main)
-        case .critical: return String(localized: "Nguy hiểm", bundle: .main)
+        case .normal: return String(localized: "Normal", bundle: .main)
+        case .warning: return String(localized: "Warning", bundle: .main)
+        case .critical: return String(localized: "Critical", bundle: .main)
         }
     }
 }

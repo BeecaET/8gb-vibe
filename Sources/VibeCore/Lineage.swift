@@ -25,10 +25,10 @@ public struct ProcessOrigin: Sendable, Hashable {
 
     /// "Orphaned from the Claude Code session in shop, ended 2 h ago."
     public func orphanNote(now: Date) -> String {
-        let session = projectName.map { String(localized: "phiên \(agent) ở dự án \($0)", bundle: .main) }
-            ?? String(localized: "phiên \(agent)", bundle: .main)
-        guard let end = endedAt else { return String(localized: "Mồ côi của \(session).", bundle: .main) }
-        return String(localized: "Mồ côi của \(session), kết thúc \(Format.duration(max(0, now.timeIntervalSince(end)))) trước.", bundle: .main)
+        let session = projectName.map { String(localized: "the \(agent) session in \($0)", bundle: .main) }
+            ?? String(localized: "the \(agent) session", bundle: .main)
+        guard let end = endedAt else { return String(localized: "Orphaned from \(session).", bundle: .main) }
+        return String(localized: "Orphaned from \(session), which ended \(Format.duration(max(0, now.timeIntervalSince(end)))) ago.", bundle: .main)
     }
 }
 

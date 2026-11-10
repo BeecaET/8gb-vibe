@@ -6,11 +6,11 @@ import UserNotifications
 enum Notifier {
     private static var askedPermission = false
 
-    static let openFreeRAM = Notification.Name("vn.beeca.8gbvibe.moDonRAM")
+    static let openFreeRAM = Notification.Name("vn.beeca.8gbvibe.openFreeRAM")
 
     static func gui(metric: Metric, item: Level, system h: SystemSnapshot, sessionCount: Int, suggestions: [Suggestion]) {
-        let title = metric == .slowMac ? String(localized: "Máy đang chậm", bundle: .main)
-            : (item == .critical ? String(localized: "\(metric.name): nguy hiểm", bundle: .main) : String(localized: "\(metric.name): cảnh báo", bundle: .main))
+        let title = metric == .slowMac ? String(localized: "Mac is slow", bundle: .main)
+            : (item == .critical ? String(localized: "\(metric.name): critical", bundle: .main) : String(localized: "\(metric.name): warning", bundle: .main))
         let body = messageText(metric, h, sessionCount, suggestions)
         // Keep a copy in the in-app inbox (Notifications page in the main window, strip in the popover).
         record(level: item, title: title, body: body, page: metric.page, metric: metric)
@@ -31,11 +31,11 @@ enum Notifier {
     /// Freeze warning from the swap trend.
     /// Very heavy swap: the measured rate, over which window, and memory pressure. No prediction, no sure cause.
     static func freezeWarning(swapMBPerMin: Double, windowSeconds: Int, pressure: Int, suspect: String) {
-        let level = pressure >= 2 ? String(localized: "nguy cấp", bundle: .main)
-                  : pressure == 1 ? String(localized: "cảnh báo", bundle: .main) : String(localized: "bình thường", bundle: .main)
-        var body = String(localized: "Swap vào ra trung bình \(Format.number(swapMBPerMin / 1024, digits: 1)) GB mỗi phút trong \(windowSeconds) giây gần nhất. Áp lực bộ nhớ: \(level). Máy có thể chậm; nên lưu việc đang làm và đóng bớt phiên hoặc app.", bundle: .main)
-        if !suspect.isEmpty { body += String(localized: " Tăng RAM nhiều nhất gần đây (chưa chắc là nguyên nhân): \(suspect).", bundle: .main) }
-        let title = String(localized: "Swap đang rất nặng", bundle: .main)
+        let level = pressure >= 2 ? String(localized: "critical", bundle: .main)
+                  : pressure == 1 ? String(localized: "warning", bundle: .main) : String(localized: "normal", bundle: .main)
+        var body = String(localized: "Swap in and out averaged \(Format.number(swapMBPerMin / 1024, digits: 1)) GB per minute over the last \(windowSeconds) seconds. Memory pressure: \(level). The Mac may be slow; save your work and close some sessions or apps.", bundle: .main)
+        if !suspect.isEmpty { body += String(localized: " Grew most in RAM recently (not necessarily the cause): \(suspect).", bundle: .main) }
+        let title = String(localized: "Swap is very heavy", bundle: .main)
         record(level: .critical, title: title, body: body, page: .freeRAM, metric: .slowMac)
         send(id: "freeze-warning", title: title, body: body, loud: true)
     }
@@ -77,13 +77,13 @@ enum Notifier {
             let advice = suggestions.prefix(3).map { g -> String in
                 g.title
             }
-            let head = String(localized: "Swap \(Format.bytes(h.swap.used)), tải \(Format.number(h.load.m5, digits: 0)).", bundle: .main)
-            return advice.isEmpty ? head + String(localized: " Bấm để xem nên tắt gì.", bundle: .main) : head + String(localized: " Gợi ý: ", bundle: .main) + advice.joined(separator: ", ") + String(localized: ". Bấm để xem.", bundle: .main)
-        case .pressure: return String(localized: "Áp lực bộ nhớ đang ở mức \(h.pressure.name.lowercased()). Mở app để xem nên tắt gì.", bundle: .main)
-        case .swap: return String(localized: "Swap đang dùng \(Format.bytes(h.swap.used)). Máy có thể chậm khi phải đọc ghi swap nhiều.", bundle: .main)
-        case .disk: return String(localized: "Ổ chỉ còn \(Format.bytes(h.disk.free)) trống.", bundle: .main)
-        case .load: return String(localized: "Tải CPU 5 phút là \(Format.number(h.load.m5, digits: 0)), máy có \(h.coreCount) nhân.", bundle: .main)
-        case .claudeSessions: return String(localized: "Đang mở \(sessionCount) phiên Claude Code. Kiểm tra và kết thúc phiên đã xong tại nơi bạn mở nó.", bundle: .main)
+            let head = String(localized: "Swap \(Format.bytes(h.swap.used)), load \(Format.number(h.load.m5, digits: 0)).", bundle: .main)
+            return advice.isEmpty ? head + String(localized: " Click to see what to quit.", bundle: .main) : head + String(localized: " Suggestions: ", bundle: .main) + advice.joined(separator: ", ") + String(localized: ". Click to view.", bundle: .main)
+        case .pressure: return String(localized: "Memory pressure is \(h.pressure.name.lowercased()). Open the app to see what to quit.", bundle: .main)
+        case .swap: return String(localized: "Swap in use: \(Format.bytes(h.swap.used)). Heavy swap I/O can slow the Mac.", bundle: .main)
+        case .disk: return String(localized: "Only \(Format.bytes(h.disk.free)) left free on the disk.", bundle: .main)
+        case .load: return String(localized: "5-minute CPU load is \(Format.number(h.load.m5, digits: 0)) on \(h.coreCount) cores.", bundle: .main)
+        case .claudeSessions: return String(localized: "\(sessionCount) Claude Code sessions open. Review and end finished sessions where you started them.", bundle: .main)
         }
     }
 }

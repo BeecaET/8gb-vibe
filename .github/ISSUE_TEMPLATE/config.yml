@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Security vulnerability / Lỗi bảo mật
+  - name: Security vulnerability
     url: https://github.com/BeecaET/8gb-vibe/security/advisories/new
-    about: Report security problems privately. / Báo lỗi bảo mật riêng tư.
-  - name: Download 8GB Vibe / Tải 8GB Vibe
+    about: Report security problems privately.
+  - name: Download 8GB Vibe
     url: https://8gb.beeca.vn
-    about: Latest release. / Bản mới nhất.
+    about: Latest release.

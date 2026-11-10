@@ -10,13 +10,13 @@ public enum WorkCategory: String, CaseIterable, Sendable, Codable {
         case .xcode: return "Xcode, Simulator"
         case .android: return "Android"
         case .docker: return "Docker"
-        case .browsers: return String(localized: "Trình duyệt", bundle: .main)
-        case .chat: return String(localized: "Chat, họp", bundle: .main)
-        case .cloudSync: return String(localized: "Đồng bộ đám mây", bundle: .main)
-        case .ide: return String(localized: "IDE, AI khác", bundle: .main)
+        case .browsers: return String(localized: "Browsers", bundle: .main)
+        case .chat: return String(localized: "Chat, meetings", bundle: .main)
+        case .cloudSync: return String(localized: "Cloud sync", bundle: .main)
+        case .ide: return String(localized: "IDEs, other AI", bundle: .main)
         case .otherDev: return "Node, Python, Java"
-        case .system: return String(localized: "Hệ thống", bundle: .main)
-        case .other: return String(localized: "App khác", bundle: .main)
+        case .system: return String(localized: "System", bundle: .main)
+        case .other: return String(localized: "Other apps", bundle: .main)
         }
     }
 
@@ -40,19 +40,19 @@ public enum WorkCategory: String, CaseIterable, Sendable, Codable {
 
 /// Fixed item names used in several places.
 public enum ItemName {
-    public static let appClaude = String(localized: "App Claude", bundle: .main)
-    public static let claudeVM = String(localized: "Máy ảo Claude", bundle: .main)
+    public static let appClaude = String(localized: "Claude app", bundle: .main)
+    public static let claudeVM = String(localized: "Claude VM", bundle: .main)
     public static let claudeCode = "Claude Code"
     public static let xcode = "Xcode"
     public static let simulator = "Simulator"
-    public static let compile = String(localized: "Biên dịch", bundle: .main)
+    public static let compile = String(localized: "Compilers", bundle: .main)
     public static let gradle = "Gradle"
     public static let emulator = "Emulator Android"
     public static let androidStudio = "Android Studio"
     public static let dockerDesktop = "Docker Desktop"
-    public static let dockerVM = String(localized: "Máy ảo Docker", bundle: .main)
-    public static let otherVM = String(localized: "Máy ảo khác", bundle: .main)
-    public static let system = String(localized: "Hệ thống", bundle: .main)
+    public static let dockerVM = String(localized: "Docker VM", bundle: .main)
+    public static let otherVM = String(localized: "Other VMs", bundle: .main)
+    public static let system = String(localized: "System", bundle: .main)
 }
 
 public struct Classification: Hashable, Sendable {

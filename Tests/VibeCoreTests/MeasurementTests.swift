@@ -187,7 +187,7 @@ final class MeasurementStoreTests: XCTestCase {
         XCTAssertEqual(s[0].overlapEpisodes, 1)
         XCTAssertEqual(s[0].suspects, ["Claude Code (shop) (1)"])
         XCTAssertEqual(s[1].strainedMinutes, 0)
-        XCTAssertTrue(MeasurementSummary.report(rows, folder: URL(fileURLWithPath: "/tmp")).contains("2 buổi"))
+        XCTAssertTrue(MeasurementSummary.report(rows, folder: URL(fileURLWithPath: "/tmp")).contains("2 sessions"))
     }
 }
 

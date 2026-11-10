@@ -24,7 +24,7 @@ final class ProcessGuardTests: XCTestCase {
     }
 
     func testLoginwindowHasOwnReason() {
-        XCTAssertTrue(reason("/System/Library/CoreServices/loginwindow.app/Contents/MacOS/loginwindow")!.contains("đăng xuất"))
+        XCTAssertTrue(reason("/System/Library/CoreServices/loginwindow.app/Contents/MacOS/loginwindow")!.contains("logs you out"))
     }
 
     func testClaudeAndClaudeCodeAreBlocked() {

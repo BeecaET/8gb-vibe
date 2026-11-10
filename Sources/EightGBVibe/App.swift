@@ -27,7 +27,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 /// and the app switcher (⌘Tab), like a normal app; closing the window hides the Dock icon again.
 enum DockIcon {
     /// The SwiftUI `Window` scene id of the main window.
-    static let mainWindowID = "chinh"
+    static let mainWindowID = StoredName.mainWindow
 
     static func isMainWindow(_ w: NSWindow) -> Bool {
         w.identifier?.rawValue.contains(mainWindowID) == true
@@ -102,7 +102,7 @@ struct EightGBVibeApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window(Product.name, id: "chinh") {
+        Window(Product.name, id: StoredName.mainWindow) {
             ThemedRoot { MainWindow() }
                 .environmentObject(monitor)
                 .frame(minWidth: 720, minHeight: 480)
@@ -111,7 +111,7 @@ struct EightGBVibeApp: App {
         .windowResizability(.contentMinSize)
         .commands {
             CommandGroup(replacing: .appInfo) {
-                Button("Giới thiệu \(Product.name)") { Product.openAboutPanel() }
+                Button("About \(Product.name)") { Product.openAboutPanel() }
             }
             // 8GB Vibe > Settings… (⌘,): opens the Settings page of the main window.
             CommandGroup(replacing: .appSettings) { SettingsMenuItem(monitor: monitor) }
@@ -126,7 +126,7 @@ struct EightGBVibeApp: App {
                     }
                 }
                 Divider()
-                Button("Bảng lệnh…") { monitor.showPalette.toggle() }.keyboardShortcut("k")
+                Button("Command Palette…") { monitor.showPalette.toggle() }.keyboardShortcut("k")
                 Divider()
             }
         }
@@ -139,7 +139,7 @@ struct SettingsMenuItem: View {
     let monitor: Monitor
     @Environment(\.openWindow) private var openWindow
     var body: some View {
-        Button("Cài đặt…") {
+        Button("Settings…") {
             monitor.page = .settings
             openWindow(id: DockIcon.mainWindowID)
             NSApp.activate(ignoringOtherApps: true)
@@ -170,14 +170,14 @@ struct MenuBarLabel: View {
         Color.clear.frame(width: 0, height: 0)
             .onReceive(NotificationCenter.default.publisher(for: Notifier.openFreeRAM)) { _ in
                 monitor.page = .freeRAM
-                openWindow(id: "chinh")
+                openWindow(id: StoredName.mainWindow)
                 NSApp.activate(ignoringOtherApps: true)
             }
             .task {
                 let args = CommandLine.arguments
                 if let i = args.firstIndex(of: "--window") {
                     if i + 1 < args.count, let t = Page(rawValue: args[i + 1]) { monitor.page = t }
-                    openWindow(id: "chinh")
+                    openWindow(id: StoredName.mainWindow)
                     NSApp.activate(ignoringOtherApps: true)
                     // --size WxH: resizes the main window, e.g. 720x480 for the smallest layout (UI testing).
                     if let j = args.firstIndex(of: "--size"), j + 1 < args.count {
@@ -191,7 +191,7 @@ struct MenuBarLabel: View {
                 // First run (or --welcome): open the main window with the welcome sheet. Never while capturing the popover.
                 if (args.contains("--welcome") || !UserDefaults.standard.bool(forKey: WelcomeSheet.seenKey)),
                    !args.contains("--capture-popover") {
-                    if !args.contains("--window") { openWindow(id: "chinh"); NSApp.activate(ignoringOtherApps: true) }
+                    if !args.contains("--window") { openWindow(id: StoredName.mainWindow); NSApp.activate(ignoringOtherApps: true) }
                     try? await Task.sleep(nanoseconds: 800_000_000)
                     monitor.showWelcome = true
                 }

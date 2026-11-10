@@ -1,11 +1,11 @@
 # Contributing to 8GB Vibe
 
-English | [Tiếng Việt](#ghi-chú-tiếng-việt)
 
 Thank you for helping. 8GB Vibe is a macOS menu bar app that keeps 8 GB Macs responsive while people vibe code. It is free and made by BEECA.
 
 ## Before you start
 
+- Issues and pull requests are welcome in English or Vietnamese. A Vietnamese overview of the app is in [README.vi.md](README.vi.md).
 - For a bug, open an issue with your Mac model, RAM and macOS version.
 - For a new feature, open a feature request first so we can agree on the idea before you write code.
 - Security problems: do not open a public issue, see [SECURITY.md](SECURITY.md).
@@ -41,11 +41,13 @@ open "build/8GB Vibe.app"
 
 ## UI text: Vietnamese and English
 
-- Vietnamese is the development language. Translation keys are the Vietnamese sentences.
-- Every new user-facing string needs an English line in `Resources/en.lproj/Localizable.strings`.
+- English is the development language. Translation keys are the English sentences written in the code; no Vietnamese text goes in `Sources/`.
+- Every new user-facing string needs a Vietnamese line in `Resources/vi.lproj/Localizable.strings`. `en.lproj` needs no entries.
 - SwiftUI `Text("...")` and `Button("...")` are localized automatically. For `String` values use `String(localized: "...", bundle: .main)`.
-- Values in sentences use `%@` (strings, formatted numbers) and `%lld` (integers), for example `"Đã chọn %lld mục" = "%lld selected";`.
-- Try English with `open -n "build/8GB Vibe.app" --args -AppleLanguages "(en)"`.
+- Values in sentences use `%@` (strings, formatted numbers) and `%lld` (integers), for example `"%lld selected" = "Đã chọn %lld mục";`. When the Vietnamese order differs, use positional specifiers (`%1$@`, `%2$@`).
+- Check with `scripts/check-l10n.sh` (every key in the code has a Vietnamese entry) and `swift test` (no Vietnamese text in `Sources/`).
+- Stored names (UserDefaults keys, file names, JSON keys) keep their old Vietnamese values; see `StoredName`. Never rename them.
+- Try Vietnamese with `open -n "build/8GB Vibe.app" --args -AppleLanguages "(vi)"`.
 
 ## Safety rules (must keep)
 
@@ -65,14 +67,3 @@ These are part of the product. Pull requests that break them will not be merged.
 - Add screenshots for UI changes, in Vietnamese and English if you can.
 - By sending a pull request you agree that your contribution is licensed under the [Apache License 2.0](LICENSE), as stated in section 5 of the License.
 - The 8GB Vibe name, icon and the BEECA logo are trademarks, see [TRADEMARKS.md](TRADEMARKS.md).
-
----
-
-## Ghi chú tiếng Việt
-
-- Báo lỗi: mở issue, ghi máy, RAM, phiên bản macOS. Tính năng mới: mở đề xuất trước khi viết code.
-- Test lõi: `swift test -j 2`. Bản dùng thử: `./scripts/package.sh`. Không cần chạy `scripts/release.sh`.
-- Code, tên tệp, chú thích, commit bằng tiếng Anh. Chuỗi giao diện: khoá là câu tiếng Việt, thêm bản tiếng Anh vào `Resources/en.lproj/Localizable.strings`.
-- Chỉ dùng thư viện của Apple.
-- Nguyên tắc an toàn bắt buộc: luôn hỏi trước, không tự tắt, không tự xoá, không gửi dữ liệu ra ngoài.
-- Gửi PR nghĩa là đồng ý đóng góp theo Giấy phép Apache 2.0. Tên, icon 8GB Vibe và logo BEECA là nhãn hiệu, xem `TRADEMARKS.md`.

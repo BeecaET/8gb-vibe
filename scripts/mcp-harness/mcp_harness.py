@@ -44,7 +44,7 @@ def t2():
         if sorted(out.values()) == ["granted", "queued"]: ok += 1
         else: detail.append(out)
         a.kill(); b.kill(); shutil.rmtree(d, ignore_errors=True)
-    results["2"] = (ok == 20, f"{ok}/20 lần đúng 1 granted + 1 queued {detail[:2]}")
+    results["2"] = (ok == 20, f"{ok}/20 runs with exactly 1 granted + 1 queued {detail[:2]}")
 
 def t10():
     d = tmp(); a, b = MCP(d, "A"), MCP(d, "B")
@@ -53,7 +53,7 @@ def t10():
     s2 = b.tool("acquire_slot", kind="gradle")["slot"]["status"]
     a.kill()
     s3 = b.tool("acquire_slot", kind="gradle")["slot"]["status"]
-    results["10"] = (s1 == "granted" and s2 == "queued" and s3 == "granted", f"A {s1}, B {s2}; kill MCP của A; B xin lại: {s3}")
+    results["10"] = (s1 == "granted" and s2 == "queued" and s3 == "granted", f"A {s1}, B {s2}; killed A's MCP; B asked again: {s3}")
     b.kill(); shutil.rmtree(d, ignore_errors=True)
 
 def t11():
@@ -68,7 +68,7 @@ def t11():
                         "expiresAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() + 1500))})
     json.dump(st, open(os.path.join(d, "state.json"), "w"))
     s = b.tool("acquire_slot", kind="gradle")["slot"]["status"]
-    results["11"] = (s == "granted", f"slot của tiến trình có pid đang sống ({os.getpid()}) nhưng giờ khởi động khác: B xin được ngay ({s})")
+    results["11"] = (s == "granted", f"slot held by a live pid ({os.getpid()}) but a different start time: B granted at once ({s})")
     b.kill(); shutil.rmtree(d, ignore_errors=True)
 
 def t12():
@@ -87,10 +87,10 @@ def t12():
     cs = b.tool("can_start", kind="gradle")
     alive = job.poll() is None
     ok12 = bool(mine) and mine[0].get("lease") == "expired" and mine[0].get("task") == "running" and q == "queued" and alive
-    results["12"] = (ok12, f"sau 65 s: lease={mine[0].get('lease') if mine else 'mất'}, task={mine[0].get('task') if mine else None}, busy_with={mine[0].get('busy_with') if mine else None}; B: {q}, can_start {cs.get('decision')}; việc nặng giả vẫn chạy: {alive}")
+    results["12"] = (ok12, f"after 65 s: lease={mine[0].get('lease') if mine else 'gone'}, task={mine[0].get('task') if mine else None}, busy_with={mine[0].get('busy_with') if mine else None}; B: {q}, can_start {cs.get('decision')}; fake heavy job still running: {alive}")
     job.terminate(); job.wait()   # our own fake job
     q2 = b.tool("acquire_slot", kind="gradle")["slot"]["status"]
-    results["13"] = (q2 == "granted", f"việc nặng giả kết thúc: B được cấp ({q2})")
+    results["13"] = (q2 == "granted", f"fake heavy job ended: B granted ({q2})")
     a.kill(); b.kill(); shutil.rmtree(d, ignore_errors=True); None
 
 def t17():
@@ -99,7 +99,7 @@ def t17():
     a.tool("register_agent", tool="Claude Code", project="shop"); b.tool("register_agent", tool="Codex CLI", project="api")
     s1 = a.tool("acquire_slot", kind="gradle")["slot"]["status"]; s2 = b.tool("acquire_slot", kind="gradle")["slot"]["status"]
     ok = st.get("source") == "direct" and st.get("window_s") == 1 and s1 == "granted" and s2 == "queued"
-    results["17"] = (ok, f"không có status.json: source={st.get('source')}, window_s={st.get('window_s')}, swap={st.get('swap_mb_per_min')}; phối hợp: {s1}/{s2}")
+    results["17"] = (ok, f"no status.json: source={st.get('source')}, window_s={st.get('window_s')}, swap={st.get('swap_mb_per_min')}; coordination: {s1}/{s2}")
     a.kill(); b.kill(); shutil.rmtree(d, ignore_errors=True)
 
 def t9():
@@ -111,11 +111,11 @@ def t9():
     q = b.tool("acquire_slot", kind="gradle")["slot"]   # B's call runs expiry
     m = a.tool("my_slots")
     ok = q["status"] == "queued" and any(s.get("slot_id") == sid for s in m.get("slots", []))
-    results["9"] = (ok, f"A im lặng {silent} s: A vẫn giữ {sid} ({[s.get('status') for s in m.get('slots', [])]}), B: {q['status']}")
+    results["9"] = (ok, f"A silent for {silent} s: A still holds {sid} ({[s.get('status') for s in m.get('slots', [])]}), B: {q['status']}")
     a.kill(); b.kill(); shutil.rmtree(d, ignore_errors=True)
 
 for k in which:
     try: {"2": t2, "9": t9, "10": t10, "11": t11, "12": t12, "17": t17}[k]()
-    except Exception as e: results[k] = (False, f"lỗi: {e}")
+    except Exception as e: results[k] = (False, f"error: {e}")
 for k, (ok, why) in sorted(results.items(), key=lambda x: int(x[0])):
-    print(f"{k}\t{'ĐẠT' if ok else 'TRƯỢT'}\t{why}")
+    print(f"{k}\t{'PASS' if ok else 'FAIL'}\t{why}")

@@ -20,13 +20,13 @@ struct AgentsPage: View {
                 headroomCard(SessionHeadroom(budget: budget, sessions: sessions))
             }
             HStack(spacing: 10) {
-                StatBox(label: "Phiên agent", value: "\(sessions.count)",
-                        subtitle: "Các công cụ dòng lệnh đã nhận diện")
-                StatBox(label: "Phiên rảnh", value: "\(sessions.filter(isIdle).count)",
+                StatBox(label: "Agent sessions", value: "\(sessions.count)",
+                        subtitle: "Detected command-line tools")
+                StatBox(label: "Idle sessions", value: "\(sessions.filter(isIdle).count)",
                         color: sessions.contains(where: isIdle) ? .orange : .primary,
-                        subtitle: "Ít CPU trên \(Format.number(monitor.thresholds.idleMinutes, digits: 0)) phút")
-                StatBox(label: "RAM công cụ AI", value: Format.bytes(items.reduce(0) { $0 + $1.footprint }),
-                        subtitle: "Gồm cả tiến trình con")
+                        subtitle: "Low CPU for over \(Format.number(monitor.thresholds.idleMinutes, digits: 0)) minutes")
+                StatBox(label: "AI tools RAM", value: Format.bytes(items.reduce(0) { $0 + $1.footprint }),
+                        subtitle: "Includes child processes")
             }
             let duplicates = MCPBuilder.duplicates(monitor.processes.mcpServers)
             if !duplicates.isEmpty { duplicateMCPCard(duplicates) }
@@ -38,14 +38,14 @@ struct AgentsPage: View {
                 }
             }
             if items.isEmpty {
-                Text("Chưa thấy công cụ AI nào đang mở.").foregroundStyle(.secondary)
+                Text("No AI tools are open.").foregroundStyle(.secondary)
             }
             HStack {
-                Text("“Rảnh” nghĩa là ít dùng CPU từ lúc theo dõi; phiên có thể đang chờ phản hồi. Kết thúc phiên tại Terminal hoặc app nơi bạn mở nó.")
+                Text("“Idle” means low CPU use since monitoring began; a session may be waiting for a response. End sessions in the Terminal or app where you started them.")
                     .font(.callout).foregroundStyle(.secondary)
                 Spacer()
                 if items.contains(where: { $0.name == "Claude Code" }) {
-                    Button("Mở Claude") { monitor.openClaude() }
+                    Button("Open Claude") { monitor.openClaude() }
                 }
             }
         }
@@ -87,23 +87,23 @@ struct AgentsPage: View {
             VStack(alignment: .leading, spacing: 3) {
                 switch c.state {
                 case let .room(n):
-                    Text("Ước tính còn chỗ cho khoảng \(n) phiên agent nữa").font(.headline)
-                    Text("Mỗi phiên cần khoảng \(Format.bytes(c.perSession)), RAM còn trống theo ước tính khoảng \(Format.bytes(c.availableRAM)).")
+                    Text("Estimated room for about \(n) more agent sessions").font(.headline)
+                    Text("Each session needs about \(Format.bytes(c.perSession)); estimated free RAM is about \(Format.bytes(c.availableRAM)).")
                         .font(.callout).foregroundStyle(.secondary)
                 case .tight:
-                    Text("Gần hết RAM, chưa nên mở thêm phiên").font(.headline)
-                    Text("Mỗi phiên mới cần khoảng \(Format.bytes(c.perSession)), nhiều hơn phần RAM còn trống theo ước tính.")
+                    Text("RAM is nearly full, better not open more sessions").font(.headline)
+                    Text("A new session needs about \(Format.bytes(c.perSession)), more than the estimated free RAM.")
                         .font(.callout).foregroundStyle(.secondary)
                 case .short:
-                    Text("Máy đang thiếu RAM, chưa nên mở thêm phiên").font(.headline)
-                    Text("Các app đang cần hơn RAM máy khoảng \(Format.bytes(c.overflow)). Đóng bớt phiên hoặc app không dùng trước.")
+                    Text("This Mac is short of RAM, better not open more sessions").font(.headline)
+                    Text("Apps need about \(Format.bytes(c.overflow)) more than this Mac's RAM. Close unused sessions or apps first.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
-                Text("Chỉ là ước tính theo RAM các app đang cần, không bảo đảm máy không swap.").font(.callout).foregroundStyle(.secondary)
+                Text("Only an estimate from the RAM apps need now. It does not guarantee the Mac will not swap.").font(.callout).foregroundStyle(.secondary)
             }
             Spacer()
             if case .room = c.state {} else {
-                Button("Dọn RAM") { monitor.page = .freeRAM }.buttonStyle(.borderedProminent)
+                Button("Free RAM") { monitor.page = .freeRAM }.buttonStyle(.borderedProminent)
             }
         }
         .padding(14)
@@ -125,8 +125,8 @@ struct AgentsPage: View {
                     }
                     if sorted.count > Self.sessionPreview + 2 {
                         Divider().padding(.leading, 44)
-                        Button(showAll ? String(localized: "Thu gọn", bundle: .main)
-                                       : String(localized: "Hiện cả \(sorted.count) phiên", bundle: .main)) {
+                        Button(showAll ? String(localized: "Collapse", bundle: .main)
+                                       : String(localized: "Show all \(sorted.count) sessions", bundle: .main)) {
                             if showAll { showAllSessions.remove(c.name) } else { showAllSessions.insert(c.name) }
                         }
                         .buttonStyle(.link)
@@ -161,7 +161,7 @@ struct AgentsPage: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(c.name).fontWeight(.medium)
                     if hasSessions {
-                        Text("\(c.sessions.count) phiên").font(.callout).foregroundStyle(.secondary)
+                        Text("\(c.sessions.count) sessions").font(.callout).foregroundStyle(.secondary)
                     } else if let g = c.note {
                         Text(g).font(.callout).foregroundStyle(.secondary)
                     }
@@ -181,10 +181,10 @@ struct AgentsPage: View {
     @ViewBuilder
     private func toolStatus(_ c: AITool) -> some View {
         if c.isFrontmost {
-            Text("Đang dùng").foregroundStyle(.green)
+            Text("In use").foregroundStyle(.green)
         } else if !c.sessions.isEmpty {
             let idleCount = c.sessions.filter(isIdle).count
-            if idleCount > 0 { Text("\(idleCount) rảnh").foregroundStyle(.orange) } else { status(c.cpu, c.lastActive) }
+            if idleCount > 0 { Text("\(idleCount) idle").foregroundStyle(.orange) } else { status(c.cpu, c.lastActive) }
         } else {
             status(c.cpu, c.lastActive)
         }
@@ -202,16 +202,16 @@ struct AgentsPage: View {
     /// Each agent session starts its own copy of every MCP server. Shows the ones running more than once.
     private func duplicateMCPCard(_ items: [MCPDuplicate]) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label("MCP server chạy nhiều bản", systemImage: "square.stack.3d.up").font(.headline)
+            Label("MCP servers running more than once", systemImage: "square.stack.3d.up").font(.headline)
             ForEach(items) { d in
                 HStack {
-                    Text("\(d.name): \(d.count) bản")
+                    Text("\(d.name): \(d.count) copies")
                     Spacer()
                     Text(Format.bytes(d.footprint)).monospacedDigit().foregroundStyle(.secondary)
                 }
                 .font(.callout)
             }
-            Text("Nhiều phiên hoặc app có thể chạy các bản MCP riêng. Nhiều bản không nhất thiết là lỗi. Kiểm tra phiên đã xong hoặc MCP ít dùng để giảm RAM.")
+            Text("Multiple sessions or apps can run separate MCP instances. Multiple copies are not necessarily an error. Review finished sessions or unused MCP servers to reduce memory use.")
                 .font(.callout).foregroundStyle(.secondary)
         }
         .padding(14)
@@ -223,17 +223,17 @@ struct AgentsPage: View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
-                    Text(p.projectName ?? String(localized: "Không rõ thư mục", bundle: .main))
+                    Text(p.projectName ?? String(localized: "Unknown folder", bundle: .main))
                         .lineLimit(1).truncationMode(.middle)
                     // Open for more than a day: usually finished work still holding RAM.
                     if Date().timeIntervalSince(p.startDate) > 24 * 3600 {
-                        StatusPill(owner: "lâu ngày", color: .orange)
+                        StatusPill(owner: "long-running", color: .orange)
                     }
                 }
-                Text("Mở \(Format.duration(Date().timeIntervalSince(p.startDate))) · PID \(String(p.pid))")
+                Text("Open for \(Format.duration(Date().timeIntervalSince(p.startDate))) · PID \(String(p.pid))")
                     .font(.callout).foregroundStyle(.secondary).lineLimit(1)
                 if monitor.processes.memoryWarnings.contains(where: { $0.sessionID == p.id }) {
-                    Text(p.tool == "Claude Code" ? "RAM đang phình: gõ /exit rồi mở lại bằng claude -c" : "RAM đang phình: thoát phiên rồi mở lại")
+                    Text(p.tool == "Claude Code" ? "RAM growing: type /exit, then resume with claude -c" : "RAM growing: exit the session and resume it")
                         .font(.callout).foregroundStyle(.orange)
                 }
                 let mcp = monitor.processes.mcpServers.filter { $0.origin?.sessionID == p.id }

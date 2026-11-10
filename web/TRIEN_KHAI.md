@@ -1,84 +1,87 @@
-# Triển khai trang 8gb.beeca.vn
+# Deploying 8gb.beeca.vn
 
-Trang là site tĩnh: không backend, không cơ sở dữ liệu, không Docker. Bất kỳ máy chủ web nào phục vụ được tệp tĩnh qua HTTPS đều dùng được. Thông tin máy chủ thật (địa chỉ, tài khoản, khoá) không ghi trong repo.
+The website is a static site: no backend, no database, no Docker. Any web server that serves static files over HTTPS will do. Real server details (address, accounts, keys) are not kept in this repository.
 
-## 1. Cấu trúc trên máy chủ
+The file name `TRIEN_KHAI.md` ("deployment" in Vietnamese) and the folder names `anh/` (images) and `tai-ve/` (downloads) are kept because the live site and download links use them.
+
+## 1. Layout on the server
 
 ```
-<thư mục web>/
+<web root>/
 ├── index.html, style.css, main.js
+├── en/index.html              English page
 ├── favicon-32.png, apple-touch-icon.png, robots.txt, sitemap.xml
-├── anh/                       ảnh chụp, icon, logo BEECA, og.jpg
+├── anh/                       screenshots, icon, BEECA logo, og.jpg
 └── tai-ve/
-    ├── 8GB-Vibe-<phiên bản>.dmg
-    └── 8GB-Vibe-<phiên bản>.dmg.sha256
+    ├── 8GB-Vibe-<version>.dmg
+    └── 8GB-Vibe-<version>.dmg.sha256
 ```
 
-Chỉ chép các tệp của trang. Không chép `TRIEN_KHAI.md`, `nginx-8gb.conf`, `cap-nhat-phien-ban.sh`, `tai-ve/.gitignore`.
+Copy only the site files. Do not copy `TRIEN_KHAI.md`, `nginx-8gb.conf`, the `.sh` scripts or `tai-ve/.gitignore`.
 
-## 2. Cài lần đầu
+## 2. First setup
 
-1. Trỏ bản ghi DNS của tên miền về máy chủ.
-2. Chép trang lên máy chủ, ví dụ bằng rsync qua SSH (dùng khoá, không dùng mật khẩu):
-
-   ```bash
-   rsync -av --exclude 'TRIEN_KHAI.md' --exclude '*.conf' --exclude '*.sh' --exclude '.gitignore' --exclude 'tai-ve/' web/ <user>@<máy chủ>:<thư mục web>/
-   ```
-
-3. Chép DMG (chỉ bản đã notarize và staple) vào `tai-ve/`.
-4. Quyền tệp: thư mục 755, tệp 644.
-5. Cấp chứng chỉ HTTPS, ví dụ certbot chế độ webroot:
+1. Point the domain's DNS record at the server.
+2. Copy the site to the server, for example with rsync over SSH (key only, no password):
 
    ```bash
-   certbot certonly --webroot -w <thư mục web> -d 8gb.beeca.vn
+   rsync -av --exclude 'TRIEN_KHAI.md' --exclude '*.conf' --exclude '*.sh' --exclude '.gitignore' --exclude 'tai-ve/' web/ <user>@<server>:<web root>/
    ```
 
-6. Cấu hình nginx theo [nginx-8gb.conf](nginx-8gb.conf) (HTTP chuyển 301 sang HTTPS, header bảo mật, không liệt kê `tai-ve/`), chạy `nginx -t` rồi reload.
-7. Đặt hook gia hạn chứng chỉ để reload nginx sau khi certbot gia hạn (ví dụ trong `/etc/letsencrypt/renewal-hooks/deploy/`).
+3. Copy the DMG (notarized and stapled builds only) into `tai-ve/`.
+4. Permissions: folders 755, files 644.
+5. Get an HTTPS certificate, for example with certbot in webroot mode:
 
-## 3. Kiểm tra sau khi triển khai
+   ```bash
+   certbot certonly --webroot -w <web root> -d 8gb.beeca.vn
+   ```
+
+6. Configure nginx from [nginx-8gb.conf](nginx-8gb.conf) (HTTP redirects 301 to HTTPS, security headers, no listing of `tai-ve/`), run `nginx -t`, then reload.
+7. Add a renewal hook so nginx reloads after certbot renews the certificate (for example in `/etc/letsencrypt/renewal-hooks/deploy/`).
+
+## 3. Checks after deploying
 
 ```bash
 curl -sI https://8gb.beeca.vn/ | head -20
 ```
 
 ```bash
-curl -s https://8gb.beeca.vn/tai-ve/8GB-Vibe-<phiên bản>.dmg | shasum -a 256
+curl -s https://8gb.beeca.vn/tai-ve/8GB-Vibe-<version>.dmg | shasum -a 256
 ```
 
-Cần thấy:
+Expect:
 
-- Trang chính 200, có `Strict-Transport-Security`, `Content-Security-Policy`, `Cache-Control: no-cache`.
-- DMG 200, `Content-Type: application/x-apple-diskimage`, SHA-256 khớp mã trên trang.
-- `http://` chuyển 301 sang `https://`.
-- `https://8gb.beeca.vn/tai-ve/` trả 403 hoặc 404.
-- Tải DMG bằng Safari trên một máy Mac khác, mở được, Gatekeeper không chặn.
+- The home page and `/en/` return 200 with `Strict-Transport-Security`, `Content-Security-Policy` and `Cache-Control: no-cache`.
+- The DMG returns 200 with `Content-Type: application/x-apple-diskimage`, and its SHA-256 matches the one on the page.
+- `http://` redirects 301 to `https://`.
+- `https://8gb.beeca.vn/tai-ve/` returns 403 or 404.
+- The DMG downloads in Safari on another Mac, opens, and Gatekeeper does not block it.
 
-## 4. Khi có bản mới
+## 4. Releasing a new version
 
-1. Build và notarize bằng `scripts/release.sh`, ra `build/release/8GB-Vibe-<phiên bản>.dmg`.
-2. Cập nhật số phiên bản, ngày, dung lượng, SHA-256 và đường dẫn trong `index.html`. Chạy **sau khi staple**, vì staple làm đổi SHA-256:
+1. Build and notarize with `scripts/release.sh`. Output: `build/release/8GB-Vibe-<version>.dmg`.
+2. Update the version, date, size, SHA-256 and link on both pages (`index.html` and `en/index.html`). Run it **after stapling**, because stapling changes the SHA-256:
 
    ```bash
-   web/cap-nhat-phien-ban.sh build/release/8GB-Vibe-<phiên bản>.dmg
+   web/update-version.sh build/release/8GB-Vibe-<version>.dmg
    ```
 
-   Nếu sửa tay, sửa đủ các chỗ có thuộc tính `data-pb` và khối JSON-LD (`softwareVersion`, `downloadUrl`).
-3. Chép DMG mới lên `tai-ve/` trước, rồi mới chép `index.html`, để nút tải không trỏ tới tệp chưa có.
-4. Giữ bản DMG cũ vài ngày rồi xoá.
-5. Cập nhật `lastmod` trong `sitemap.xml` nếu nội dung trang đổi nhiều.
+   `web/cap-nhat-phien-ban.sh` is the old name of the same script. If you edit by hand, change every element with a `data-pb` attribute and the JSON-LD block (`softwareVersion`, `downloadUrl`). Release notes are written by hand on both pages.
+3. Copy the new DMG to `tai-ve/` first, then the pages, so the download button never points to a missing file.
+4. Keep the previous DMG for a few days, then delete it.
+5. Update `lastmod` in `sitemap.xml` when the content changes a lot.
 
-## 5. Bộ nhớ đệm CSS và JS
+## 5. CSS and JS caching
 
-`index.html` gọi `/style.css?v=...` và `/main.js?v=...`. Khi sửa `style.css` hoặc `main.js`, đổi chuỗi `v=` để trình duyệt tải bản mới ngay.
+`index.html` loads `/style.css?v=...` and `/main.js?v=...`. When you change `style.css` or `main.js`, change the `v=` value so browsers fetch the new file at once. Images in `anh/` are cached for one day: when you replace an image under the same name, change its `?v=` too, including `og:image`.
 
-## 6. Ảnh chụp
+## 6. Screenshots
 
-- Mỗi ảnh trong `anh/` có bản 800 px và 1600 px (`srcset`).
-- Chụp bằng `--window <trang>` và `screencapture -l <window id>`, không chụp toàn màn hình.
-- Trước khi đưa lên trang, làm mờ tên dự án, đường dẫn và mọi thông tin riêng trong ảnh.
+- Each image in `anh/` has an 800 px and a 1600 px version (`srcset`). English screenshots use `-en-` in the name.
+- Capture with `--window <page>` and `screencapture -l <window id>`, not the whole screen.
+- Before publishing, blur project names, paths and anything private in the image.
 
-## 7. Quay lui
+## 7. Rolling back
 
-- Trang: chép lại bản `web/` của commit trước.
-- nginx: đưa tệp vhost về bản trước, `nginx -t`, reload.
+- Site: copy back the `web/` folder from the previous commit.
+- nginx: restore the previous vhost file, run `nginx -t`, reload.

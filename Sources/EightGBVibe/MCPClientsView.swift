@@ -27,25 +27,25 @@ struct MCPClientsView: View {
             if !scanned {
                 ProgressView().controlSize(.small)
             } else if clients.isEmpty {
-                Text("Chưa thấy client agent nào trên máy này.").foregroundStyle(.secondary)
+                Text("No agent client found on this Mac.").foregroundStyle(.secondary)
             }
             ForEach(clients) { c in row(c) }
         } header: {
-            Text("Client agent trên máy này")
+            Text("Agent clients on this Mac")
         } footer: {
-            Text("Cài: thêm 8GB Vibe vào cấu hình MCP của client (hỏi trước, có sao lưu, ghi Nhật ký). Gỡ: chỉ xoá mục 8gbvibe.")
+            Text("Install adds 8GB Vibe to the client's MCP config (asks first, keeps a backup, writes to the Log). Remove only deletes the 8gbvibe entry.")
                 .font(.callout).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
         }
         .task { await scan() }
         .confirmationDialog(pending.map(title) ?? "", isPresented: Binding(get: { pending != nil }, set: { if !$0 { pending = nil } }),
                             presenting: pending) { p in
-            Button(p.install ? String(localized: "Cài", bundle: .main) : String(localized: "Gỡ", bundle: .main)) { perform(p) }
-            Button("Huỷ", role: .cancel) {}
+            Button(p.install ? String(localized: "Install", bundle: .main) : String(localized: "Remove", bundle: .main)) { perform(p) }
+            Button("Cancel", role: .cancel) {}
         } message: { p in
             Text(detail(p))
         }
         SettingsSection {
-            DisclosureGroup("Client khác: đoạn cấu hình để chép tay", isExpanded: $showOthers) {
+            DisclosureGroup("Other clients: config to copy by hand", isExpanded: $showOthers) {
                 VStack(alignment: .leading, spacing: 10) {
                     snippet(String(localized: "Codex: ~/.codex/config.toml", bundle: .main), MCPInstall.codexSnippet(server: server))
                     snippet(String(localized: "Cursor: ~/.cursor/mcp.json. Gemini CLI: ~/.gemini/settings.json. Antigravity: ~/.gemini/config/mcp_config.json. Claude Desktop: ~/Library/Application Support/Claude/claude_desktop_config.json", bundle: .main),
@@ -71,15 +71,15 @@ struct MCPClientsView: View {
                 if busy == c.id { ProgressView().controlSize(.small) }
                 switch state {
                 case .notInstalled:
-                    Button("Cài") { pending = Pending(client: c, install: true) }.disabled(busy != nil)
+                    Button("Install") { pending = Pending(client: c, install: true) }.disabled(busy != nil)
                 case .installed:
-                    Button("Gỡ") { pending = Pending(client: c, install: false) }.disabled(busy != nil)
+                    Button("Remove") { pending = Pending(client: c, install: false) }.disabled(busy != nil)
                 case .unreadable:
                     EmptyView()
                 }
             }
             if case .unreadable = state {
-                Text("Không đọc được cấu hình. App không ghi vào tệp này.").font(.callout).foregroundStyle(.secondary)
+                Text("Config could not be read. The app will not write to this file.").font(.callout).foregroundStyle(.secondary)
             }
             if let r = results[c.id] {
                 Text(r).font(.callout).foregroundStyle(.secondary).textSelection(.enabled)
@@ -92,29 +92,29 @@ struct MCPClientsView: View {
     /// Not installed, Installed, Connected (n agents) or Error.
     @ViewBuilder private func status(_ s: MCPConfigState, connected: Int) -> some View {
         switch s {
-        case .notInstalled: StatusPill(owner: "Chưa cài", color: .secondary)
+        case .notInstalled: StatusPill(owner: "Not installed", color: .secondary)
         case .installed:
-            if connected > 0 { StatusPill(owner: "Đã kết nối · \(connected)", color: .green) }
-            else { StatusPill(owner: "Đã cài", color: .blue) }
-        case .unreadable: StatusPill(owner: "Lỗi", color: .orange)
+            if connected > 0 { StatusPill(owner: "Connected · \(connected)", color: .green) }
+            else { StatusPill(owner: "Installed", color: .blue) }
+        case .unreadable: StatusPill(owner: "Error", color: .orange)
         }
     }
 
     private func title(_ p: Pending) -> String {
-        p.install ? String(localized: "Cài 8GB Vibe vào \(p.client.kind.displayName)?", bundle: .main)
-                  : String(localized: "Gỡ 8GB Vibe khỏi \(p.client.kind.displayName)?", bundle: .main)
+        p.install ? String(localized: "Install 8GB Vibe in \(p.client.kind.displayName)?", bundle: .main)
+                  : String(localized: "Remove 8GB Vibe from \(p.client.kind.displayName)?", bundle: .main)
     }
 
     /// Exactly what will happen: the command, or the file, the entry and the backup.
     private func detail(_ p: Pending) -> String {
         switch p.client.method {
         case let .command(add, remove):
-            return String(localized: "8GB Vibe sẽ chạy lệnh chính thức của client:\n\(MCPInstall.display(p.install ? add : remove))", bundle: .main)
+            return String(localized: "8GB Vibe will run the client's official command:\n\(MCPInstall.display(p.install ? add : remove))", bundle: .main)
         case let .json(url), let .toml(url):
-            let backup = String(localized: "Tệp cũ được sao lưu thành \(url.lastPathComponent).bak-8gbvibe-<giờ> trong cùng thư mục. Phần khác của tệp giữ nguyên.", bundle: .main)
+            let backup = String(localized: "The old file is backed up as \(url.lastPathComponent).bak-8gbvibe-<time> in the same folder. The rest of the file stays as it is.", bundle: .main)
             return p.install
-                ? String(localized: "Thêm vào \(url.path):\n\(MCPFileInstaller.preview(p.client, server: server))\n\(backup)", bundle: .main)
-                : String(localized: "Chỉ xoá mục \"8gbvibe\" trong \(url.path).\n\(backup)", bundle: .main)
+                ? String(localized: "Add to \(url.path):\n\(MCPFileInstaller.preview(p.client, server: server))\n\(backup)", bundle: .main)
+                : String(localized: "Only removes the \"8gbvibe\" entry in \(url.path).\n\(backup)", bundle: .main)
         }
     }
 
@@ -144,18 +144,18 @@ struct MCPClientsView: View {
                     do {
                         let outcome = try MCPFileInstaller.apply(p.client, install: p.install, server: server)
                         guard case let .done(backup) = outcome else { return (true, "", url.path) }
-                        return (true, backup.map { String(localized: "Sao lưu: \($0.path)", bundle: .main) } ?? "", url.path)
+                        return (true, backup.map { String(localized: "Backup: \($0.path)", bundle: .main) } ?? "", url.path)
                     } catch {
                         return (false, Self.describe(error), url.path)
                     }
                 }
             }.value
             let name = p.client.kind.displayName
-            ActionLog.write(LogEntry(timestamp: Date(), action: p.install ? "Cài MCP" : "Gỡ MCP", target: "\(name): \(target)",
-                                     freed: 0, outcome: ok ? "Xong" : "Lỗi"))
-            var message = ok ? String(localized: "Xong.", bundle: .main) : String(localized: "Lỗi:", bundle: .main)
+            ActionLog.write(LogEntry(timestamp: Date(), action: p.install ? "Install MCP" : "Remove MCP", target: "\(name): \(target)",
+                                     freed: 0, outcome: ok ? "Done" : "Error"))
+            var message = ok ? String(localized: "Done.", bundle: .main) : String(localized: "Error:", bundle: .main)
             if !text.isEmpty { message += " " + text }
-            if ok && p.client.reopenHint { message += " " + String(localized: "Cần mở lại \(name) để nhận thay đổi.", bundle: .main) }
+            if ok && p.client.reopenHint { message += " " + String(localized: "Reopen \(name) to pick up the change.", bundle: .main) }
             results[p.client.id] = message
             states[p.client.id] = MCPClients.state(p.client)
             busy = nil
@@ -164,11 +164,11 @@ struct MCPClientsView: View {
 
     private nonisolated static func describe(_ error: Error) -> String {
         switch error as? MCPConfigError {
-        case .corrupt?, .notAnObject?: return String(localized: "Tệp cấu hình hỏng hoặc không phải JSON thường. Không ghi gì.", bundle: .main)
-        case .serversNotAnObject?: return String(localized: "Mục mcpServers trong tệp có dạng lạ. Không ghi gì.", bundle: .main)
-        case .alreadyPresent?: return String(localized: "Đã có mục 8gbvibe. Không ghi gì.", bundle: .main)
-        case .notPresent?: return String(localized: "Không thấy mục 8gbvibe. Không ghi gì.", bundle: .main)
-        case .verifyFailed?: return String(localized: "Kiểm lại sau khi sửa không khớp. Không ghi gì.", bundle: .main)
+        case .corrupt?, .notAnObject?: return String(localized: "The config file is damaged or not plain JSON. Nothing was written.", bundle: .main)
+        case .serversNotAnObject?: return String(localized: "mcpServers in the file has an unexpected shape. Nothing was written.", bundle: .main)
+        case .alreadyPresent?: return String(localized: "The 8gbvibe entry is already there. Nothing was written.", bundle: .main)
+        case .notPresent?: return String(localized: "No 8gbvibe entry found. Nothing was written.", bundle: .main)
+        case .verifyFailed?: return String(localized: "The check after editing did not match. Nothing was written.", bundle: .main)
         case nil: return error.localizedDescription
         }
     }
@@ -196,7 +196,7 @@ struct MCPClientsView: View {
             HStack {
                 Text(title).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 Spacer()
-                Button("Chép") {
+                Button("Copy") {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(text, forType: .string)
                 }

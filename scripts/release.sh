@@ -81,4 +81,5 @@ echo "6/6 Verifying..."
 spctl -a -vv --type execute "$APP" 2>&1 || true
 spctl -a -vv --type open --context context:primary-signature "$DMG" 2>&1 || true
 shasum -a 256 "$DMG" | tee "$DMG.sha256"
+forget_bundle "$APP"; forget_bundle "$OUT/dmg/$DISPLAY_NAME.app"
 echo "Done: $DMG ($VERSION, build $BUILD_NUMBER)"

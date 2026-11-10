@@ -87,7 +87,7 @@ public enum HeavyJobDetector {
         case "buildkitd": return cpu >= busyCPU ? "Docker build" : nil
         default: break
         }
-        if compilers.contains(file) { return cpu >= busyCPU ? "Biên dịch" : nil }
+        if compilers.contains(file) { return cpu >= busyCPU ? "Compilers" : nil }
         if file == "java" || t.name == "java" {
             let a = t.arguments.joined(separator: " ")
             if a.contains("GradleDaemon") || a.contains("org.gradle") { return cpu >= 50 ? "Gradle build" : nil }
@@ -486,23 +486,23 @@ public enum MeasurementSummary {
         return result
     }
 
-    /// Plain text report (Vietnamese, for the owner), one block per work session.
+    /// Plain text report for the command line (English), one block per work session. Dates are DD/MM/YYYY, 24-hour.
     public static func report(_ rows: [MinuteRow], folder: URL) -> String {
         let s = sessions(rows)
         let f = DateFormatter()
-        f.locale = Locale(identifier: "vi_VN")
+        f.locale = Locale(identifier: "en_GB")
         f.dateFormat = "dd/MM/yyyy HH:mm"
-        var out = ["8GB Vibe: tóm tắt đo (\(rows.count) phút, \(s.count) buổi). Dữ liệu: \(folder.path)", ""]
+        var out = ["8GB Vibe: measurement summary (\(rows.count) minutes, \(s.count) sessions). Data: \(folder.path)", ""]
         for x in s {
-            out.append("Buổi \(f.string(from: x.start)) đến \(f.string(from: x.end)): \(x.minutes) phút đo")
-            out.append("  Căng: \(x.strainedMinutes) phút (có việc nặng: \(x.strainedWithHeavy), thường trú: \(x.strainedResident))")
-            out.append("  Việc nặng chồng nhau: \(x.overlapEpisodes) lần, nhiều nhất \(x.maxHeavyJobs) việc cùng lúc")
-            out.append("  Swap vào và ra: \(Int(x.swapIOMB)) MB")
-            if !x.suspects.isEmpty { out.append("  Có thể liên quan: \(x.suspects.joined(separator: ", "))") }
+            out.append("Session \(f.string(from: x.start)) to \(f.string(from: x.end)): \(x.minutes) minutes measured")
+            out.append("  Strained: \(x.strainedMinutes) min (with heavy jobs: \(x.strainedWithHeavy), resident: \(x.strainedResident))")
+            out.append("  Overlapping heavy jobs: \(x.overlapEpisodes) times, at most \(x.maxHeavyJobs) at once")
+            out.append("  Swap in and out: \(Int(x.swapIOMB)) MB")
+            if !x.suspects.isEmpty { out.append("  Possibly related: \(x.suspects.joined(separator: ", "))") }
             out.append("")
         }
-        out.append("\"Căng\" tạm định nghĩa: áp lực bộ nhớ từ mức cảnh báo, hoặc swap vào và ra từ \(Int(MeasurementRecorder.strainSwapMB)) MB trong một phút.")
-        out.append("\"Có thể liên quan\" chỉ là tương quan, không chứng minh nguyên nhân.")
+        out.append("\"Strained\" (working definition): memory pressure at warning level or above, or swap in and out of \(Int(MeasurementRecorder.strainSwapMB)) MB or more in one minute.")
+        out.append("\"Possibly related\" is correlation only, not proof of cause.")
         return out.joined(separator: "\n")
     }
 }

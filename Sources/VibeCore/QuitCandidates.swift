@@ -53,9 +53,9 @@ public enum CandidateBuilder {
     public static var ramThreshold: UInt64 = 50 << 20
 
     static let protectedBundles: [String: String] = [
-        "com.apple.finder": String(localized: "Finder là một phần của macOS.", bundle: .main),
-        "com.apple.dock": String(localized: "Dock là một phần của macOS.", bundle: .main),
-        "com.apple.systemuiserver": String(localized: "Một phần của macOS.", bundle: .main)
+        "com.apple.finder": String(localized: "Finder is part of macOS.", bundle: .main),
+        "com.apple.dock": String(localized: "Dock is part of macOS.", bundle: .main),
+        "com.apple.systemuiserver": String(localized: "Part of macOS.", bundle: .main)
     ]
 
     static func isClaude(_ a: RunningApp) -> Bool {
@@ -77,12 +77,12 @@ public enum CandidateBuilder {
                                  quitMethod: .simulator(app: app?.identity), footprint: m.footprint, cpu: m.cpu,
                                  startDate: m.earliestStart, lastActive: max(m.lastActive, app?.lastActive ?? .distantPast),
                                  isFrontmost: app?.app.isFrontmost ?? false,
-                                 note: String(localized: "Tắt mọi máy Simulator đang bật. Dữ liệu trong máy ảo vẫn giữ.", bundle: .main), blockedReason: nil))
+                                 note: String(localized: "Shuts down all running Simulators. Their data is kept.", bundle: .main), blockedReason: nil))
         }
 
         // Gradle daemon, Android emulator: no UI, stopped with SIGTERM.
-        for (name, item, note) in [("Gradle daemon", ItemName.gradle, String(localized: "Lần build sau tự khởi động lại.", bundle: .main)),
-                                   ("Emulator Android", ItemName.emulator, String(localized: "Máy Android ảo sẽ tắt.", bundle: .main))] {
+        for (name, item, note) in [("Gradle daemon", ItemName.gradle, String(localized: "Restarts on the next build.", bundle: .main)),
+                                   ("Emulator Android", ItemName.emulator, String(localized: "The Android emulator will shut down.", bundle: .main))] {
             guard let m = result.item(.android, item), m.footprint > 0 else { continue }
             let identities = result.processes.filter { $0.kind == Classification(.android, item) }
                 .map { ProcessIdentity(pid: $0.pid, startDate: $0.startDate) }
@@ -99,18 +99,18 @@ public enum CandidateBuilder {
             if isSimulator(a.app) { continue }
             var fp = a.footprint
             var note = a.otherInstances.isEmpty
-                ? String(localized: "\(a.processCount) tiến trình. App có thể hỏi lưu trước khi đóng.", bundle: .main)
-                : String(localized: "\(a.otherInstances.count + 1) bản app đang chạy, \(a.processCount) tiến trình. App có thể hỏi lưu trước khi đóng.", bundle: .main)
+                ? String(localized: "\(a.processCount) processes. The app may ask to save before closing.", bundle: .main)
+                : String(localized: "\(a.otherInstances.count + 1) copies running, \(a.processCount) processes. The app may ask to save before quitting.", bundle: .main)
             let isDocker = a.app.bundleId == "com.docker.docker" || a.app.bundlePath.hasSuffix("/Docker.app")
             if isDocker, let vm = dockerVM {
                 fp += vm.footprint
-                note = String(localized: "Gồm cả máy ảo Docker. Container đang chạy sẽ dừng.", bundle: .main)
+                note = String(localized: "Includes the Docker VM. Running containers will stop.", bundle: .main)
             }
             // Without the main process identity the app cannot be quit safely, so it is not listed.
             guard fp >= ramThreshold, let identity = a.identity else { continue }
             var key = a.app.bundleId.flatMap { protectedBundles[$0] }
             if isClaude(a.app) {
-                key = String(localized: "App Claude được bảo vệ để tránh ngắt công việc bên trong. Hãy quản lý phiên tại nơi bạn mở nó.", bundle: .main)
+                key = String(localized: "The Claude app is protected to avoid interrupting work inside it. Manage sessions where you started them.", bundle: .main)
             }
             let group = ProcessClassifier.classifyOne(ProcessRecord(pid: a.app.pid, ppid: 1, uid: 501, name: a.app.name,
                                                         path: a.app.bundlePath + "/Contents/MacOS/x",
@@ -129,18 +129,18 @@ public enum CandidateBuilder {
     public static func from(_ d: DevServer, now: Date = Date()) -> QuitCandidate {
         var name = d.serverKind
         if let project = d.projectName { name += " (\(project))" }
-        if let c = d.ports.first { name += String(localized: ", cổng \(String(c.number))", bundle: .main) + (d.ports.count > 1 ? "..." : "") }
+        if let c = d.ports.first { name += String(localized: ", port \(String(c.number))", bundle: .main) + (d.ports.count > 1 ? "..." : "") }
         let note: String
         if let o = d.origin, d.orphaned {
             note = o.orphanNote(now: now)
         } else if d.orphaned {
-            note = String(localized: "Mồ côi: người chạy đã thoát nhưng tiến trình vẫn chạy.", bundle: .main)
+            note = String(localized: "Orphaned: whatever started it has quit, but it is still running.", bundle: .main)
         } else {
-            note = String(localized: "Chạy từ \(d.ownerDescription).", bundle: .main)
+            note = String(localized: "Started by \(d.ownerDescription).", bundle: .main)
         }
         return QuitCandidate(id: d.id, name: name, group: .otherDev, quitMethod: .processes(d.processIdentities),
                           footprint: d.footprint, cpu: d.cpu, startDate: d.startDate, lastActive: d.lastActive,
-                          isFrontmost: false, note: note + String(localized: " Gửi tín hiệu dừng nhẹ.", bundle: .main), blockedReason: nil)
+                          isFrontmost: false, note: note + String(localized: " Sends a gentle stop signal.", bundle: .main), blockedReason: nil)
     }
 
     /// Orphans as quit candidates. Orphans from the same agent session are grouped so they can be stopped at once.
@@ -160,12 +160,12 @@ public enum CandidateBuilder {
         let o = group[0].origin!
         let kinds = Array(Set(group.map(\.serverKind))).sorted().joined(separator: ", ")
         return QuitCandidate(id: "orphans:\(o.sessionID)",
-                             name: String(localized: "\(group.count) tiến trình mồ côi của \(o.sessionDescription)", bundle: .main),
+                             name: String(localized: "\(group.count) orphaned processes from \(o.sessionDescription)", bundle: .main),
                              group: .otherDev, quitMethod: .processes(group.flatMap(\.processIdentities)),
                              footprint: group.reduce(0) { $0 + $1.footprint }, cpu: group.reduce(0) { $0 + $1.cpu },
                              startDate: group.map(\.startDate).min() ?? now, lastActive: group.map(\.lastActive).max() ?? now,
                              isFrontmost: false,
-                             note: kinds + ". " + o.orphanNote(now: now) + String(localized: " Gửi tín hiệu dừng nhẹ.", bundle: .main),
+                             note: kinds + ". " + o.orphanNote(now: now) + String(localized: " Sends a gentle stop signal.", bundle: .main),
                              blockedReason: nil)
     }
 }
@@ -195,14 +195,14 @@ public enum SuggestionBuilder {
         let isSessionIdle = result.sessions.filter { now.timeIntervalSince($0.lastActive) >= idleTime }
         if !isSessionIdle.isEmpty {
             items.append(Suggestion(id: "phien-claude", kind: .archiveClaudeSessions,
-                           title: String(localized: "Kiểm tra \(isSessionIdle.count) phiên Claude Code ít hoạt động", bundle: .main),
-                           detail: String(localized: "Ít dùng CPU trên \(Format.duration(idleTime)); có thể đang chờ phản hồi. Nếu đã xong, kết thúc tại nơi bạn mở phiên.", bundle: .main),
+                           title: String(localized: "Review \(isSessionIdle.count) Claude Code sessions with low activity", bundle: .main),
+                           detail: String(localized: "Low CPU use for over \(Format.duration(idleTime)); sessions may be waiting for a response. If finished, end them where you started them.", bundle: .main),
                            freed: isSessionIdle.reduce(0) { $0 + $1.footprint }))
         }
         for u in CandidateBuilder.from(result, selfIdentifier: selfIdentifier)
         where u.blockedReason == nil && u.footprint >= 200 << 20 && u.isIdle(afterSeconds: idleTime, now: now) {
-            items.append(Suggestion(id: u.id, kind: .quitAll(u), title: String(localized: "Tắt \(u.name)", bundle: .main),
-                           detail: String(localized: "Ít dùng CPU trong \(Format.duration(now.timeIntervalSince(u.lastActive))). Hãy kiểm tra trước khi đóng.", bundle: .main),
+            items.append(Suggestion(id: u.id, kind: .quitAll(u), title: String(localized: "Stop \(u.name)", bundle: .main),
+                           detail: String(localized: "Low CPU use for \(Format.duration(now.timeIntervalSince(u.lastActive))). Review before quitting.", bundle: .main),
                            freed: u.footprint))
         }
         // Sessions growing in memory: exiting and resuming gives the memory back (/clear does not).
@@ -211,13 +211,13 @@ public enum SuggestionBuilder {
             let title: String
             switch w.kind {
             case .large:
-                title = String(localized: "\(session) chiếm \(Format.bytes(w.footprint))", bundle: .main)
+                title = String(localized: "\(session) uses \(Format.bytes(w.footprint))", bundle: .main)
             case let .growing(step):
-                title = String(localized: "\(session) tăng \(Format.bytes(step)) mỗi 10 phút", bundle: .main)
+                title = String(localized: "\(session) grows \(Format.bytes(step)) every 10 minutes", bundle: .main)
             }
             let detail = w.agent == "Claude Code"
-                ? String(localized: "Gõ /exit rồi mở lại bằng claude -c để trả RAM. /clear không trả RAM. App không tự làm.", bundle: .main)
-                : String(localized: "Thoát phiên rồi mở lại để trả RAM. App không tự làm.", bundle: .main)
+                ? String(localized: "Type /exit, then resume with claude -c to give the RAM back. /clear does not. The app does nothing itself.", bundle: .main)
+                : String(localized: "Exit the session and resume it to give the RAM back. The app does nothing itself.", bundle: .main)
             items.append(Suggestion(id: "phinh:\(w.sessionID)", kind: .restartSession(w.sessionID), title: title, detail: detail,
                                     freed: w.footprint > restartBaseline ? w.footprint - restartBaseline : 0))
         }

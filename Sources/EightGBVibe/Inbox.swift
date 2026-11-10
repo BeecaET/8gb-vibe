@@ -38,7 +38,7 @@ final class Inbox: ObservableObject {
     static var file: URL {
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent(Product.name, isDirectory: true)
-        return directory.appendingPathComponent("thong-bao.json")
+        return directory.appendingPathComponent(StoredName.inboxFile)
     }
     /// Preview entries (UI testing) are never written to disk.
     private var isPreview = false
@@ -90,14 +90,14 @@ final class Inbox: ObservableObject {
         isPreview = true
         let now = Date()
         entries = [
-            InboxEntry(date: now.addingTimeInterval(-120), level: 2, title: String(localized: "Swap đang rất nặng", bundle: .main),
-                       body: String(localized: "Swap đang ở mức 1,2 GB mỗi phút. Hãy lưu việc đang làm và đóng bớt phiên hoặc app.", bundle: .main), page: Page.freeRAM.rawValue),
-            InboxEntry(date: now.addingTimeInterval(-1500), level: 1, title: String(localized: "Phiên Claude Code: cảnh báo", bundle: .main),
-                       body: String(localized: "Đang mở 28 phiên Claude Code. Kiểm tra và kết thúc phiên đã xong tại nơi bạn mở nó.", bundle: .main), page: Page.agents.rawValue),
-            InboxEntry(date: now.addingTimeInterval(-7200), level: 1, title: String(localized: "Theo dõi bị gián đoạn khi máy căng", bundle: .main),
-                       body: String(localized: "Lúc 13:05, app không lấy được số đo trong 40 giây khi máy đang căng. Có thể liên quan: Claude, Chrome.", bundle: .main), page: Page.overview.rawValue, read: true),
-            InboxEntry(date: now.addingTimeInterval(-90000), level: 1, title: String(localized: "Ổ đĩa: cảnh báo", bundle: .main),
-                       body: String(localized: "Ổ chỉ còn 38 GB trống.", bundle: .main), page: Page.disk.rawValue, read: true,
+            InboxEntry(date: now.addingTimeInterval(-120), level: 2, title: String(localized: "Swap is very heavy", bundle: .main),
+                       body: String(localized: "Swap is growing 1.2 GB per minute. Save your work and close some sessions or apps.", bundle: .main), page: Page.freeRAM.rawValue),
+            InboxEntry(date: now.addingTimeInterval(-1500), level: 1, title: String(localized: "Claude Code sessions: warning", bundle: .main),
+                       body: String(localized: "28 Claude Code sessions open. Review and end finished sessions where you started them.", bundle: .main), page: Page.agents.rawValue),
+            InboxEntry(date: now.addingTimeInterval(-7200), level: 1, title: String(localized: "Monitoring was interrupted while the Mac was strained", bundle: .main),
+                       body: String(localized: "At 13:05, the app got no readings for 40 seconds while the Mac was strained. Possibly related: Claude, Chrome.", bundle: .main), page: Page.overview.rawValue, read: true),
+            InboxEntry(date: now.addingTimeInterval(-90000), level: 1, title: String(localized: "Disk: warning", bundle: .main),
+                       body: String(localized: "Only 38 GB free on disk.", bundle: .main), page: Page.disk.rawValue, read: true,
                        metric: "disk", resolvedAt: now.addingTimeInterval(-80000)),
         ]
     }
@@ -149,18 +149,18 @@ struct InboxPage: View {
         PageContainer {
             HStack(alignment: .firstTextBaseline) {
                 if inbox.unread.isEmpty {
-                    Text(inbox.entries.isEmpty ? "Chưa có thông báo nào" : "Đã đọc hết").foregroundStyle(.secondary)
+                    Text(inbox.entries.isEmpty ? "No notifications yet" : "All read").foregroundStyle(.secondary)
                 } else {
-                    Text("\(inbox.unread.count) chưa đọc").fontWeight(.semibold)
+                    Text("\(inbox.unread.count) unread").fontWeight(.semibold)
                 }
                 Spacer()
-                Button("Đánh dấu đã đọc hết") { inbox.markAllRead() }
+                Button("Mark all read") { inbox.markAllRead() }
                     .disabled(inbox.unread.isEmpty)
             }
             if inbox.entries.isEmpty {
                 VStack(spacing: 6) {
                     Image(systemName: "bell.slash").font(.largeTitle).foregroundStyle(.tertiary)
-                    Text("Cảnh báo vượt ngưỡng, swap vào ra nhiều và gián đoạn theo dõi sẽ hiện ở đây khi bật thông báo trong Cài đặt.")
+                    Text("Threshold alerts, heavy swap activity and monitoring interruptions appear here when notifications are enabled in Settings.")
                         .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity).padding(40)
@@ -175,7 +175,7 @@ struct InboxPage: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .card(padding: 0)
             }
-            Text("Lưu 7 ngày gần nhất, tối đa 100 thông báo, chỉ trên máy này. Thông báo chưa đọc và chưa kết thúc mới nhất cũng hiện ở đầu bảng trên thanh menu.")
+            Text("Keeps up to 100 notifications from the last 7 days, on this Mac only. The latest unread, unresolved alert also appears at the top of the menu bar panel.")
                 .font(.callout).foregroundStyle(.secondary)
         }
     }
@@ -195,15 +195,15 @@ struct InboxPage: View {
                 Text(e.body).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 14) {
                     if let t = e.resolvedAt {
-                        Label("Đã hết lúc \(inboxTime(t))", systemImage: "checkmark").font(.callout).foregroundStyle(.green)
+                        Label("Over at \(inboxTime(t))", systemImage: "checkmark").font(.callout).foregroundStyle(.green)
                     }
-                    Button("Xem \(e.target.name) ›") {
+                    Button("View \(e.target.name) ›") {
                         inbox.markRead(e.id)
                         monitor.page = e.target
                     }
                     .buttonStyle(.link).font(.callout)
                     if !e.read {
-                        Button("Đã đọc") { inbox.markRead(e.id) }.buttonStyle(.link).font(.callout).foregroundStyle(.secondary)
+                        Button("Mark read") { inbox.markRead(e.id) }.buttonStyle(.link).font(.callout).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -235,7 +235,7 @@ struct InboxStrip: View {
                 }
                 Button { inbox.markRead(e.id) } label: { Image(systemName: "xmark") }
                     .buttonStyle(.borderless).foregroundStyle(.secondary)
-                    .help("Đã đọc").accessibilityLabel("Đánh dấu đã đọc")
+                    .help("Mark read").accessibilityLabel("Mark as read")
             }
             .padding(10)
             .background(e.levelValue.color.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))

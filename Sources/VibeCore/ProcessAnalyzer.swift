@@ -44,7 +44,7 @@ public struct ClaudeCodeSession: Identifiable, Sendable, Hashable {
     public var lastActive: Date
 
     public var projectName: String {
-        guard let t = directory else { return String(localized: "Không rõ thư mục", bundle: .main) }
+        guard let t = directory else { return String(localized: "Unknown folder", bundle: .main) }
         return (t as NSString).lastPathComponent
     }
 }

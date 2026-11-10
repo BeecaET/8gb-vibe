@@ -140,7 +140,7 @@ final class DevServerBuilderTests: XCTestCase {
         XCTAssertEqual(result.devServers.count, 1)
         let u = CandidateBuilder.from(result).first { $0.id == result.devServers[0].id }
         XCTAssertNotNil(u)
-        XCTAssertEqual(u?.name, "Vite (shop), cổng 5173")
+        XCTAssertEqual(u?.name, "Vite (shop), port 5173")
         XCTAssertTrue(u?.isProcess ?? false)
         // Idle long enough to become a suggestion.
         let result2 = engine.analyze(list, now: Date(timeIntervalSince1970: 1000 + 3600))

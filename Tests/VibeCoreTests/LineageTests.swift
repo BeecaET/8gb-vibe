@@ -81,7 +81,7 @@ final class LineageTests: XCTestCase {
         } else {
             XCTFail("expected processes")
         }
-        XCTAssertTrue(grouped.first?.note.contains("2 giờ") ?? false, grouped.first?.note ?? "")
+        XCTAssertTrue(grouped.first?.note.contains("2 h") ?? false, grouped.first?.note ?? "")
     }
 
     func testUnknownOriginStaysPlainOrphan() {

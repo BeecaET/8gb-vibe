@@ -13,7 +13,7 @@ struct SettingsPage: View {
     @State private var language = AppLanguage.current
     @AppStorage(AccentChoice.key) private var accent = AccentChoice.emerald.rawValue
     @AppStorage(AppAppearance.key) private var appearance = AppAppearance.system.rawValue
-    @AppStorage("tabCaiDat") private var tab = SettingsTab.general.rawValue
+    @AppStorage(StoredName.settingsTab) private var tab = SettingsTab.general.rawValue
     private let launchLanguage = AppLanguage.current
 
     enum SettingsTab: String, CaseIterable, Identifiable {
@@ -21,11 +21,11 @@ struct SettingsPage: View {
         var id: String { rawValue }
         var title: LocalizedStringKey {
             switch self {
-            case .general: return "Chung"
-            case .look: return "Giao diện"
-            case .notifications: return "Thông báo"
-            case .thresholds: return "Ngưỡng"
-            case .agents: return "Agent AI"
+            case .general: return "General"
+            case .look: return "Look"
+            case .notifications: return "Notifications"
+            case .thresholds: return "Thresholds"
+            case .agents: return "AI Agents"
             }
         }
     }
@@ -40,7 +40,7 @@ struct SettingsPage: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .fixedSize()
-            .accessibilityLabel(Text("Nhóm cài đặt"))
+            .accessibilityLabel(Text("Settings group"))
             switch SettingsTab(rawValue: tab) ?? .general {
             case .general: general
             case .look: look; menuBar
@@ -49,9 +49,9 @@ struct SettingsPage: View {
                 thresholds
                 SettingsSection {
                     HStack {
-                        Text("Khôi phục ngưỡng mặc định theo cấu hình máy này.").foregroundStyle(.secondary)
+                        Text("Restore the default thresholds for this Mac.").foregroundStyle(.secondary)
                         Spacer()
-                        Button("Khôi phục mặc định") { monitor.thresholds = monitor.profile.thresholds }
+                        Button("Restore Defaults") { monitor.thresholds = monitor.profile.thresholds }
                     }
                 }
             case .agents: AgentAccessSettings()
@@ -64,11 +64,11 @@ struct SettingsPage: View {
 
     /// Appearance and accent color; both apply immediately, no relaunch.
     private var look: some View {
-        SettingsSection("Giao diện") {
+        SettingsSection("Look") {
             PickerRow(selection: $appearance) {
                 ForEach(AppAppearance.allCases) { Text($0.name).tag($0.rawValue) }
             } label: {
-                FormLabel("Chế độ", "Áp cho cửa sổ chính và bảng ở thanh menu")
+                FormLabel("Appearance", "Applies to the main window and the menu bar panel")
             }
             .pickerStyle(.segmented)
             LabeledRow {
@@ -90,28 +90,28 @@ struct SettingsPage: View {
                     }
                 }
             } label: {
-                FormLabel("Màu nhấn", "Nút, công tắc, liên kết. Màu cảnh báo xanh, vàng, đỏ giữ nguyên.")
+                FormLabel("Accent color", "Buttons, switches, links. Green, yellow and red status colors stay the same.")
             }
         }
     }
 
     private var general: some View {
-        SettingsSection("Chung") {
+        SettingsSection("General") {
             PickerRow(selection: $language) {
                 ForEach(AppLanguage.allCases) { n in n.label.tag(n) }
             } label: {
-                FormLabel("Ngôn ngữ", "Mặc định theo ngôn ngữ của máy")
+                FormLabel("Language", "Follows the system language by default")
             }
             .onChange(of: language) { $0.save() }
             if language != launchLanguage {
                 LabeledRow {
-                    Button("Mở lại") { AppLanguage.relaunch() }.buttonStyle(.borderedProminent)
+                    Button("Relaunch") { AppLanguage.relaunch() }.buttonStyle(.borderedProminent)
                 } label: {
-                    Text("Mở lại app để đổi ngôn ngữ.").foregroundStyle(.secondary)
+                    Text("Relaunch the app to change the language.").foregroundStyle(.secondary)
                 }
             }
             ToggleRow(isOn: $launchAtLogin) {
-                FormLabel("Mở cùng máy", "Tự mở app khi bạn đăng nhập vào macOS")
+                FormLabel("Open at login", "Opens the app when you log in to macOS")
             }
             .onChange(of: launchAtLogin) { enabled in toggleLaunchAtLogin(enabled) }
             if let launchAtLoginError {
@@ -129,16 +129,16 @@ struct SettingsPage: View {
             }
             .padding(.vertical, 4)
         } header: {
-            Text("Thanh menu")
+            Text("Menu bar")
         } footer: {
-            Text("Chọn cách hiện trên thanh menu.").foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+            Text("Choose what the menu bar shows.").foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
     private var notifications: some View {
-        SettingsSection("Thông báo") {
+        SettingsSection("Notifications") {
             ToggleRow(isOn: $monitor.sendNotifications) {
-                FormLabel("Báo khi vượt ngưỡng", "Mỗi chỉ số báo tối đa 30 phút một lần, chỉ khi mức độ tăng.")
+                FormLabel("Notify when over threshold", "At most once per 30 minutes per metric, only when the level rises.")
             }
         }
     }
@@ -149,30 +149,30 @@ struct SettingsPage: View {
             ThresholdScale(title: "Swap", unit: "GB", higherIsWorse: true, maximum: 16,
                            current: h.map { Double($0.swap.used) / Format.GB },
                            yellow: $monitor.thresholds.swapYellowGB, red: $monitor.thresholds.swapRedGB, step: 1)
-            ThresholdScale(title: "Ổ trống", unit: "GB", higherIsWorse: false, maximum: 200,
+            ThresholdScale(title: "Free disk", unit: "GB", higherIsWorse: false, maximum: 200,
                            current: h.map { Double($0.disk.free) / Format.GB },
                            yellow: $monitor.thresholds.diskFreeYellowGB, red: $monitor.thresholds.diskFreeRedGB, step: 5)
-            ThresholdScale(title: "Tải CPU 5 phút", unit: "", higherIsWorse: true, maximum: 48,
+            ThresholdScale(title: "5-minute CPU load", unit: "", higherIsWorse: true, maximum: 48,
                            current: h.map { $0.load.m5 },
                            yellow: $monitor.thresholds.load5Yellow, red: $monitor.thresholds.load5Red, step: 2,
-                           note: String(localized: "Máy có \(h?.coreCount ?? 8) nhân. Đây là tải trung bình, không phải phần trăm CPU.", bundle: .main))
-            ThresholdScale(title: "Phiên Claude Code", unit: "", higherIsWorse: true, maximum: 30,
+                           note: String(localized: "This Mac has \(h?.coreCount ?? 8) cores. This is average load, not CPU percentage.", bundle: .main))
+            ThresholdScale(title: "Claude Code sessions", unit: "", higherIsWorse: true, maximum: 30,
                            current: Double(monitor.processes.sessions.count),
                            yellow: Binding(get: { Double(monitor.thresholds.sessionsYellow) }, set: { monitor.thresholds.sessionsYellow = Int($0) }),
                            red: Binding(get: { Double(monitor.thresholds.sessionsRed) }, set: { monitor.thresholds.sessionsRed = Int($0) }),
                            step: 1)
             LabeledRow {
                 HStack(spacing: 6) {
-                    Text("\(Format.number(monitor.thresholds.idleMinutes, digits: 0)) phút").monospacedDigit()
+                    Text("\(Format.number(monitor.thresholds.idleMinutes, digits: 0)) min").monospacedDigit()
                     Stepper("", value: $monitor.thresholds.idleMinutes, in: 5...240, step: 5).labelsHidden()
                 }
             } label: {
-                FormLabel("Coi là rảnh sau", "App dùng ít CPU và không ở phía trước đủ lâu sẽ được gợi ý đóng. Phiên agent chỉ được gợi ý xem lại.")
+                FormLabel("Idle after", "Apps with low CPU use that stay in the background this long are suggested for quitting. Agent sessions are only suggested for review.")
             }
         } header: {
-            Text("Ngưỡng cảnh báo")
+            Text("Alert thresholds")
         } footer: {
-            Text("Vạch đậm là mức hiện tại của máy. Chỉnh mức vàng và đỏ bằng nút bên phải.").foregroundStyle(.secondary)
+            Text("The bold mark is where this Mac is now. Adjust the yellow and red levels with the buttons on the right.").foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -212,7 +212,7 @@ struct SettingsPage: View {
             if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             launchAtLoginError = nil
         } catch {
-            launchAtLoginError = String(localized: "Không đổi được: \(error.localizedDescription)", bundle: .main)
+            launchAtLoginError = String(localized: "Could not change: \(error.localizedDescription)", bundle: .main)
             launchAtLogin = SMAppService.mainApp.status == .enabled
         }
     }
@@ -328,7 +328,7 @@ struct ThresholdScale: View {
             HStack(spacing: 8) {
                 Text(title)
                 if let current {
-                    Text("Hiện tại \(value(current))").font(.callout).foregroundStyle(levelColor(current)).monospacedDigit()
+                    Text("Now \(value(current))").font(.callout).foregroundStyle(levelColor(current)).monospacedDigit()
                 }
                 Spacer()
                 levelStepper(color: .yellow, binding: $yellow)
@@ -388,7 +388,7 @@ struct ThresholdScale: View {
         }
         .font(.callout)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(color == .red ? Text("Mức đỏ") : Text("Mức vàng"))
+        .accessibilityLabel(color == .red ? Text("Red level") : Text("Yellow level"))
         .accessibilityValue(value(binding.wrappedValue))
     }
 }

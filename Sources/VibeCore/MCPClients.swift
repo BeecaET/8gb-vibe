@@ -3,7 +3,7 @@ import Foundation
 // MARK: Agent clients on this Mac
 
 /// Agent apps that can use 8GB Vibe's MCP server. Paths and commands come from each client's official docs
-/// (see docs/NGHIEN_CUU_MCP.md, section 8). Detection only checks that files exist; it never runs a client.
+/// (see docs/MCP.md, section 8). Detection only checks that files exist; it never runs a client.
 public enum MCPClientKind: String, CaseIterable, Sendable, Identifiable {
     case claudeCode, codex, geminiCLI, cursor, claudeDesktop, antigravity
     public var id: String { rawValue }

@@ -18,19 +18,19 @@ enum Page: String, CaseIterable, Identifiable {
 
     var name: String {
         switch self {
-        case .overview: return String(localized: "Tổng quan", bundle: .main)
-        case .memory: return String(localized: "Bộ nhớ", bundle: .main)
-        case .agents: return String(localized: "Agent AI", bundle: .main)
-        case .devServers: return String(localized: "Dev server", bundle: .main)
-        case .processes: return String(localized: "Tiến trình", bundle: .main)
-        case .disk: return String(localized: "Ổ đĩa", bundle: .main)
-        case .backgroundItems: return String(localized: "Chạy nền", bundle: .main)
-        case .machine: return String(localized: "Máy", bundle: .main)
-        case .freeRAM: return String(localized: "Dọn RAM", bundle: .main)
-        case .log: return String(localized: "Nhật ký", bundle: .main)
-        case .inbox: return String(localized: "Thông báo", bundle: .main)
-        case .settings: return String(localized: "Cài đặt", bundle: .main)
-        case .about: return String(localized: "Giới thiệu", bundle: .main)
+        case .overview: return String(localized: "Overview", bundle: .main)
+        case .memory: return String(localized: "Memory", bundle: .main)
+        case .agents: return String(localized: "AI Agents", bundle: .main)
+        case .devServers: return String(localized: "Dev Servers", bundle: .main)
+        case .processes: return String(localized: "Processes", bundle: .main)
+        case .disk: return String(localized: "Disk", bundle: .main)
+        case .backgroundItems: return String(localized: "Background", bundle: .main)
+        case .machine: return String(localized: "Mac", bundle: .main)
+        case .freeRAM: return String(localized: "Free RAM", bundle: .main)
+        case .log: return String(localized: "Log", bundle: .main)
+        case .inbox: return String(localized: "Notifications", bundle: .main)
+        case .settings: return String(localized: "Settings", bundle: .main)
+        case .about: return String(localized: "About", bundle: .main)
         }
     }
 
@@ -67,9 +67,9 @@ enum Page: String, CaseIterable, Identifiable {
     /// Sidebar order and grouping (also used by the View menu).
     static let sidebarGroups: [(title: LocalizedStringKey, pages: [Page])] = [
         ("Vibe", [.agents, .devServers]),
-        ("Xem", [.overview, .memory, .processes, .disk, .backgroundItems, .machine]),
-        ("Xử lý", [.freeRAM, .log, .inbox]),
-        ("Ứng dụng", [.settings, .about]),
+        ("View", [.overview, .memory, .processes, .disk, .backgroundItems, .machine]),
+        ("Actions", [.freeRAM, .log, .inbox]),
+        ("App", [.settings, .about]),
     ]
 
     var symbol: String {
@@ -97,9 +97,9 @@ enum MenuBarStyle: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var name: String {
         switch self {
-        case .ringAndSwap: return String(localized: "Vòng tròn và swap", bundle: .main)
-        case .ringOnly: return String(localized: "Chỉ vòng tròn", bundle: .main)
-        case .ringAndRAM: return String(localized: "Vòng tròn và % RAM", bundle: .main)
+        case .ringAndSwap: return String(localized: "Ring and swap", bundle: .main)
+        case .ringOnly: return String(localized: "Ring only", bundle: .main)
+        case .ringAndRAM: return String(localized: "Ring and RAM %", bundle: .main)
         }
     }
 }
@@ -144,7 +144,7 @@ final class Monitor: ObservableObject {
     /// First-run welcome sheet is showing.
     @Published var showWelcome = false
     /// Apps the user chose to keep ("Keep this"): never suggested, never preselected. Saved in UserDefaults.
-    @Published private(set) var keptIDs: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "mucGiu") ?? [])
+    @Published private(set) var keptIDs: Set<String> = Set(UserDefaults.standard.stringArray(forKey: StoredName.keptItems) ?? [])
     /// Running totals for the batch being quit right now.
     private var batchPending = 0, batchFreed: UInt64 = 0, batchCount = 0, batchFailed = 0
     /// Heavy-job slots past their 2-hour total while the job still runs.
@@ -160,10 +160,10 @@ final class Monitor: ObservableObject {
         didSet { saveThresholds(); evaluate() }
     }
     @Published var menuBarStyle: MenuBarStyle {
-        didSet { UserDefaults.standard.set(menuBarStyle.rawValue, forKey: "kieuThanhMenu") }
+        didSet { UserDefaults.standard.set(menuBarStyle.rawValue, forKey: StoredName.menuBarStyle) }
     }
     @Published var sendNotifications: Bool {
-        didSet { UserDefaults.standard.set(sendNotifications, forKey: "guiThongBao") }
+        didSet { UserDefaults.standard.set(sendNotifications, forKey: StoredName.sendNotifications) }
     }
 
     /// Visible UI (popover, main window). When any is visible, processes are sampled more often.
@@ -178,7 +178,7 @@ final class Monitor: ObservableObject {
         scheduleProcessTimer()
     }
 
-    private let queue = DispatchQueue(label: "vn.beeca.8gbvibe.laymau", qos: .utility)
+    private let queue = DispatchQueue(label: "vn.beeca.8gbvibe.sampling", qos: .utility)
     private let analyzer = ProcessAnalyzer()
     /// Per-minute measurements (swap I/O, compression, heavy jobs), kept on this Mac only.
     let recorder: MeasurementRecorder
@@ -238,14 +238,14 @@ final class Monitor: ObservableObject {
             }
         }
 
-        if let data = UserDefaults.standard.data(forKey: "nguong"),
+        if let data = UserDefaults.standard.data(forKey: StoredName.thresholds),
            let n = try? JSONDecoder().decode(Thresholds.self, from: data) {
             thresholds = n
         } else {
             thresholds = Thresholds()
         }
-        menuBarStyle = MenuBarStyle(rawValue: UserDefaults.standard.string(forKey: "kieuThanhMenu") ?? "") ?? .ringAndSwap
-        sendNotifications = UserDefaults.standard.object(forKey: "guiThongBao") as? Bool ?? true
+        menuBarStyle = MenuBarStyle(rawValue: UserDefaults.standard.string(forKey: StoredName.menuBarStyle) ?? "") ?? .ringAndSwap
+        sendNotifications = UserDefaults.standard.object(forKey: StoredName.sendNotifications) as? Bool ?? true
         // Hardware profile: scanned on first launch (and when the Mac, its RAM or macOS changed), then reused.
         let hw = HardwareStore(file: HardwareStore.defaultFile)
         let firstScan = hw.load() == nil
@@ -254,8 +254,8 @@ final class Monitor: ObservableObject {
         profile = OptimizationProfile.forHardware(info)
         applyProfile()
         if rescanned {
-            hardwareNotice = String(localized: "Đã nhận diện máy: \(info.summary). Dùng hồ sơ \(profile.name).", bundle: .main)
-            if firstScan { Notifier.info(title: String(localized: "Cấu hình máy", bundle: .main), body: hardwareNotice ?? "") }
+            hardwareNotice = String(localized: "Recognized this Mac: \(info.summary). Using the \(profile.name) profile.", bundle: .main)
+            if firstScan { Notifier.info(title: String(localized: "Mac configuration", bundle: .main), body: hardwareNotice ?? "") }
         }
 
         agentPolicy = agentHub.loadPolicy()
@@ -296,18 +296,18 @@ final class Monitor: ObservableObject {
         var items: [String] = []
         if let i = lastIncident, Date().timeIntervalSince(i.start) < 2 * 3600 { items.append(Self.describe(i)) }
         if let budget = budget, budget.overflow > 0 {
-            items.append(String(localized: "Các app cần \(Format.bytes(budget.demand)), máy có \(Format.bytes(budget.totalRAM, digits: 0)).", bundle: .main))
+            items.append(String(localized: "Apps need \(Format.bytes(budget.demand)), this Mac has \(Format.bytes(budget.totalRAM, digits: 0)).", bundle: .main))
         }
         if h.pressure != .normal {
-            items.append(String(localized: "Áp lực bộ nhớ: \(h.pressure.name).", bundle: .main))
+            items.append(String(localized: "Memory pressure: \(h.pressure.name).", bundle: .main))
         }
-        if (levels[.swap] ?? .ok) != .ok { items.append(String(localized: "Swap đang dùng \(Format.bytes(h.swap.used)). Dung lượng swap cao chưa đủ để kết luận máy chậm.", bundle: .main)) }
-        if (levels[.load] ?? .ok) != .ok { items.append(String(localized: "CPU đang tải \(Format.number(h.load.m5, digits: 0)) trên \(h.coreCount) nhân.", bundle: .main)) }
-        if (levels[.disk] ?? .ok) != .ok { items.append(String(localized: "Ổ chỉ còn \(Format.bytes(h.disk.free, digits: 0)).", bundle: .main)) }
+        if (levels[.swap] ?? .ok) != .ok { items.append(String(localized: "Swap in use: \(Format.bytes(h.swap.used)). High swap usage alone does not prove the Mac is slow.", bundle: .main)) }
+        if (levels[.load] ?? .ok) != .ok { items.append(String(localized: "CPU load \(Format.number(h.load.m5, digits: 0)) on \(h.coreCount) cores.", bundle: .main)) }
+        if (levels[.disk] ?? .ok) != .ok { items.append(String(localized: "Only \(Format.bytes(h.disk.free, digits: 0)) free on disk.", bundle: .main)) }
         if let rise = wiredRise {
-            items.append(String(localized: "RAM wired của hệ thống tăng \(Format.bytes(rise)) trong 30 phút, chưa xác định nguyên nhân. Nếu máy chậm và mức này tiếp tục tăng, hãy lưu việc và cân nhắc khởi động lại.", bundle: .main))
+            items.append(String(localized: "System wired memory grew by \(Format.bytes(rise)) in 30 minutes; the cause is unknown. If the Mac is slow and this keeps rising, save your work and consider restarting.", bundle: .main))
         }
-        return items.isEmpty ? String(localized: "Các chỉ số đang theo dõi chưa vượt ngưỡng cảnh báo đã đặt.", bundle: .main) : items.joined(separator: " ")
+        return items.isEmpty ? String(localized: "The monitored metrics are below the configured warning thresholds.", bundle: .main) : items.joined(separator: " ")
     }
 
     /// Wired memory rising steadily over 30 minutes (kernel-side leak, invisible in process footprints).
@@ -331,10 +331,10 @@ final class Monitor: ObservableObject {
     /// Activity status of a session or item, based on the last time it used CPU.
     func status(cpu: Double, lastActive: Date, now: Date = Date()) -> (String, Color) {
         let isIdle = now.timeIntervalSince(lastActive)
-        if cpu >= 2 { return (String(localized: "Đang chạy", bundle: .main), .green) }
-        if isIdle >= thresholds.idleMinutes * 60 { return (String(localized: "Ít CPU \(Format.duration(isIdle))", bundle: .main), .orange) }
-        if lastActive.timeIntervalSince(monitoringStart) < 15 { return (String(localized: "Đang theo dõi", bundle: .main), .secondary) }
-        return (String(localized: "Có CPU \(Format.duration(isIdle)) trước", bundle: .main), .green)
+        if cpu >= 2 { return (String(localized: "Active", bundle: .main), .green) }
+        if isIdle >= thresholds.idleMinutes * 60 { return (String(localized: "Low CPU for \(Format.duration(isIdle))", bundle: .main), .orange) }
+        if lastActive.timeIntervalSince(monitoringStart) < 15 { return (String(localized: "Monitoring", bundle: .main), .secondary) }
+        return (String(localized: "CPU activity \(Format.duration(isIdle)) ago", bundle: .main), .green)
     }
 
     // MARK: Sampling
@@ -363,8 +363,8 @@ final class Monitor: ObservableObject {
         // A damaged coordination file was set aside by an MCP process: tell the user once.
         if let name = try? String(contentsOf: agentHub.corruptionNotice, encoding: .utf8) {
             try? FileManager.default.removeItem(at: agentHub.corruptionNotice)
-            Notifier.info(title: String(localized: "Tệp phối hợp agent bị hỏng", bundle: .main),
-                          body: String(localized: "Đã cất tệp hỏng thành \(name) và tạo tệp mới. Agent cần xin lại chỗ.", bundle: .main), bell: true)
+            Notifier.info(title: String(localized: "Agent coordination file was corrupt", bundle: .main),
+                          body: String(localized: "The corrupt file was kept as \(name) and a new one was created. Agents need to ask for a slot again.", bundle: .main), bell: true)
         }
         guard agentHub.hasActiveAgents(now: h.timestamp) else { return }
         agentHub.saveStatus(MachineStatusReader.make(h, rates: recorder.lastRates, processes: processes, profile: profile,
@@ -379,8 +379,8 @@ final class Monitor: ObservableObject {
         if list != overdueSlots { overdueSlots = list }
         for s in list where !notifiedOverdue.contains(s.id) {
             notifiedOverdue.insert(s.id)
-            Notifier.info(title: String(localized: "Chỗ việc nặng bị giữ quá 2 giờ", bundle: .main),
-                          body: String(localized: "\(s.holder) vẫn chạy \(s.busyWith.joined(separator: ", ")). App không dừng việc này. Mở Cài đặt > Agent AI để nhả chỗ nếu cần.", bundle: .main),
+            Notifier.info(title: String(localized: "A heavy-job slot has been held for over 2 hours", bundle: .main),
+                          body: String(localized: "\(s.holder) is still running \(s.busyWith.joined(separator: ", ")). The app does not stop it. Open Settings > AI agents to release the slot if needed.", bundle: .main),
                           bell: true)
         }
     }
@@ -388,8 +388,8 @@ final class Monitor: ObservableObject {
     /// The user released an overdue slot (after confirming). Only the reservation; no process is touched.
     func releaseOverdue(_ s: OverdueSlot) {
         let ok = agentHub.releaseByUser(slotID: s.id)
-        ActionLog.write(LogEntry(timestamp: Date(), action: "Nhả chỗ việc nặng", target: "\(s.holder), \(s.kind)", freed: 0,
-                                 outcome: ok ? "Nhả chỗ xong, không dừng tiến trình" : "Chỗ đã không còn"))
+        ActionLog.write(LogEntry(timestamp: Date(), action: "Release heavy-job slot", target: "\(s.holder), \(s.kind)", freed: 0,
+                                 outcome: ok ? "Slot released; no processes stopped" : "Slot no longer exists"))
         agentState = agentHub.read()
         overdueSlots.removeAll { $0.id == s.id }
     }
@@ -422,15 +422,16 @@ final class Monitor: ObservableObject {
         if sendNotifications { Notifier.incident(title: Self.title(i), text: Self.describe(i)) }
     }
 
-    /// Title by evidence (PHAN_HOI_CLAUDE_CAP_NHAT_2.md, table 4.2): only strong evidence says the Mac may have frozen.
+    /// Title by evidence: only strong evidence says the Mac may have frozen; weaker signs say less, so an alert never
+    /// claims more than the measurements show.
     static func title(_ i: Incident) -> String {
         // Missing samples or a slow app alone never say the whole Mac froze (owner, 08/11/2026).
-        if i.likelyFrozen { return String(localized: "Theo dõi bị gián đoạn lâu khi swap rất nặng", bundle: .main) }
+        if i.likelyFrozen { return String(localized: "Monitoring was interrupted for long while swap was very heavy", bundle: .main) }
         switch i.kind {
-        case .gap: return String(localized: "Theo dõi bị gián đoạn khi máy căng", bundle: .main)
-        case .uiStall: return String(localized: "8GB Vibe phản hồi chậm khi máy căng", bundle: .main)
-        case .endedWhileStrained: return String(localized: "Lần trước app kết thúc bất thường khi máy căng", bundle: .main)
-        case .sleep: return String(localized: "Máy ngủ", bundle: .main)
+        case .gap: return String(localized: "Monitoring was interrupted while the Mac was strained", bundle: .main)
+        case .uiStall: return String(localized: "8GB Vibe responded slowly while the Mac was strained", bundle: .main)
+        case .endedWhileStrained: return String(localized: "Last time the app ended abnormally while the Mac was strained", bundle: .main)
+        case .sleep: return String(localized: "Mac slept", bundle: .main)
         }
     }
 
@@ -442,20 +443,20 @@ final class Monitor: ObservableObject {
         var s: String
         switch i.kind {
         case .gap:
-            s = String(localized: "Lúc \(at), app không lấy được số đo trong \(Format.duration(i.duration ?? 0)) khi máy đang căng.", bundle: .main)
+            s = String(localized: "At \(at), the app got no readings for \(Format.duration(i.duration ?? 0)) while the Mac was strained.", bundle: .main)
         case .uiStall:
-            s = String(localized: "Lúc \(at), 8GB Vibe trả lời chậm \(Format.duration(i.duration ?? 0)) khi máy đang chịu tải; chưa xác định nguyên nhân.", bundle: .main)
+            s = String(localized: "At \(at), 8GB Vibe responded \(Format.duration(i.duration ?? 0)) late while the Mac was under load; the cause is unknown.", bundle: .main)
         case .endedWhileStrained:
             s = i.rebooted == true
-                ? String(localized: "Lần chạy trước của app kết thúc lúc \(at) khi máy đang căng; sau đó máy đã khởi động lại.", bundle: .main)
-                : String(localized: "Lần chạy trước của app kết thúc lúc \(at) khi máy đang căng, không thoát bình thường.", bundle: .main)
+                ? String(localized: "The app's previous run ended at \(at) while the Mac was strained; the Mac restarted afterwards.", bundle: .main)
+                : String(localized: "The app's previous run ended at \(at) while the Mac was strained, without a normal quit.", bundle: .main)
         case .sleep:
-            s = String(localized: "Máy ngủ lúc \(at), \(Format.duration(i.duration ?? 0)).", bundle: .main)
+            s = String(localized: "The Mac slept at \(at), \(Format.duration(i.duration ?? 0)).", bundle: .main)
         }
         if i.peakSwapMBPerMin >= 100 {
-            s += String(localized: " Swap lúc đó khoảng \(Format.number(i.peakSwapMBPerMin / 1024, digits: 1)) GB mỗi phút.", bundle: .main)
+            s += String(localized: " Swap was about \(Format.number(i.peakSwapMBPerMin / 1024, digits: 1)) GB per minute.", bundle: .main)
         }
-        if !i.suspect.isEmpty { s += String(localized: " Có thể liên quan: \(i.suspect).", bundle: .main) }
+        if !i.suspect.isEmpty { s += String(localized: " May be related: \(i.suspect).", bundle: .main) }
         return s
     }
 
@@ -566,12 +567,12 @@ final class Monitor: ObservableObject {
         hardware = info
         profile = OptimizationProfile.forHardware(info)
         applyProfile()
-        hardwareNotice = String(localized: "Đã nhận diện máy: \(info.summary). Dùng hồ sơ \(profile.name).", bundle: .main)
+        hardwareNotice = String(localized: "Recognized this Mac: \(info.summary). Using the \(profile.name) profile.", bundle: .main)
         scheduleProcessTimer()
     }
 
     private func saveThresholds() {
-        if let data = try? JSONEncoder().encode(thresholds) { UserDefaults.standard.set(data, forKey: "nguong") }
+        if let data = try? JSONEncoder().encode(thresholds) { UserDefaults.standard.set(data, forKey: StoredName.thresholds) }
     }
 
     // MARK: Disk, background items
@@ -617,7 +618,7 @@ final class Monitor: ObservableObject {
     /// Keep an app: hide it from suggestions and preselection until the user un-keeps it.
     func keep(_ id: String, _ on: Bool) {
         if on { keptIDs.insert(id) } else { keptIDs.remove(id) }
-        UserDefaults.standard.set(Array(keptIDs), forKey: "mucGiu")
+        UserDefaults.standard.set(Array(keptIDs), forKey: StoredName.keptItems)
         evaluate()
     }
 
@@ -639,8 +640,8 @@ final class Monitor: ObservableObject {
                 Task { @MainActor in
                     guard let self else { return }
                     self.actionStates[u.id] = outcome ? .notQuit : .quit
-                    ActionLog.write(LogEntry(timestamp: Date(), action: u.isProcess ? "Dừng" : "Thoát", target: u.name,
-                                          freed: u.footprint, outcome: outcome ? "Chưa thoát" : "Đã thoát"))
+                    ActionLog.write(LogEntry(timestamp: Date(), action: u.isProcess ? "Stop" : "Quit", target: u.name,
+                                          freed: u.footprint, outcome: outcome ? "Still running" : "Closed"))
                     self.finishBatchItem(freed: outcome ? nil : u.footprint)
                     self.sampleProcesses()
                 }
@@ -658,8 +659,8 @@ final class Monitor: ObservableObject {
             Task { @MainActor in
                 guard let self else { return }
                 self.actionStates[u.id] = running ? .notQuit : .quit
-                ActionLog.write(LogEntry(timestamp: Date(), action: u.isProcess ? "Buộc dừng" : "Buộc thoát", target: u.name,
-                                      freed: u.footprint, outcome: running ? "Chưa thoát" : "Đã thoát"))
+                ActionLog.write(LogEntry(timestamp: Date(), action: u.isProcess ? "Force stop" : "Force Quit", target: u.name,
+                                      freed: u.footprint, outcome: running ? "Still running" : "Closed"))
                 if !running { self.showFreed(FreedSummary(bytes: u.footprint, count: 1), before: before) }
                 self.sampleProcesses()
             }
@@ -690,9 +691,9 @@ final class Monitor: ObservableObject {
                 guard let self else { return }
                 let drop = after.map { MeasuredDrop(before: before, after: $0) }
                 if self.lastFreed?.id == id { self.lastFreed?.measured = drop; self.lastFreed?.measuring = false }
-                ActionLog.write(LogEntry(timestamp: Date(), action: "Đo sau khi dọn",
-                                         target: String(localized: "\(s.count) mục", bundle: .main),
-                                         freed: s.bytes, outcome: drop == nil ? "Không đo được" : "Đo sau 10 giây", measured: drop))
+                ActionLog.write(LogEntry(timestamp: Date(), action: "Measure after cleanup",
+                                         target: String(localized: "\(s.count) items", bundle: .main),
+                                         freed: s.bytes, outcome: drop == nil ? "Could not measure" : "Measured after 10 seconds", measured: drop))
             }
         }
     }
@@ -705,7 +706,7 @@ final class Monitor: ObservableObject {
         return QuitCandidate(id: "pid:\(t.id)", name: "\(t.name) (PID \(t.pid))", group: t.kind.group,
                           quitMethod: .processes([ProcessIdentity(pid: t.pid, startDate: t.startDate)]), footprint: t.footprint ?? 0, cpu: t.cpu,
                           startDate: t.startDate, lastActive: t.startDate, isFrontmost: false,
-                          note: String(localized: "Gửi tín hiệu dừng nhẹ (SIGTERM).", bundle: .main), blockedReason: ProcessGuard.reason(t))
+                          note: String(localized: "Sends a gentle stop signal (SIGTERM).", bundle: .main), blockedReason: ProcessGuard.reason(t))
     }
 
     func openClaude() {

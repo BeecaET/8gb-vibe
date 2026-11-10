@@ -5,13 +5,13 @@ import SwiftUI
 enum AppAppearance: String, CaseIterable, Identifiable {
     case system, light, dark
     var id: String { rawValue }
-    static let key = "giaoDien"
+    static let key = StoredName.appearance
 
     var name: String {
         switch self {
-        case .system: return String(localized: "Theo hệ thống", bundle: .main)
-        case .light: return String(localized: "Sáng", bundle: .main)
-        case .dark: return String(localized: "Tối", bundle: .main)
+        case .system: return String(localized: "Auto", bundle: .main)
+        case .light: return String(localized: "Light", bundle: .main)
+        case .dark: return String(localized: "Dark", bundle: .main)
         }
     }
 
@@ -32,16 +32,16 @@ enum AppAppearance: String, CaseIterable, Identifiable {
 enum AccentChoice: String, CaseIterable, Identifiable {
     case emerald, blue, purple, orange, pink, graphite
     var id: String { rawValue }
-    static let key = "mauNhan"
+    static let key = StoredName.accent
 
     var name: String {
         switch self {
-        case .emerald: return String(localized: "Ngọc lục bảo", bundle: .main)
-        case .blue: return String(localized: "Xanh dương", bundle: .main)
-        case .purple: return String(localized: "Tím", bundle: .main)
-        case .orange: return String(localized: "Cam", bundle: .main)
-        case .pink: return String(localized: "Hồng", bundle: .main)
-        case .graphite: return String(localized: "Than chì", bundle: .main)
+        case .emerald: return String(localized: "Emerald", bundle: .main)
+        case .blue: return String(localized: "Blue", bundle: .main)
+        case .purple: return String(localized: "Purple", bundle: .main)
+        case .orange: return String(localized: "Orange", bundle: .main)
+        case .pink: return String(localized: "Pink", bundle: .main)
+        case .graphite: return String(localized: "Graphite", bundle: .main)
         }
     }
 

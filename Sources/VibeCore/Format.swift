@@ -52,16 +52,16 @@ public enum Format {
         number(ratio * 100, digits: 0) + percentSign
     }
 
-    /// Examples: 45 giây, 12 phút, 3 giờ, 1 ngày 18 giờ.
+    /// Examples: 45 sec, 12 min, 3 h, 1 d 18 h (localized).
     public static func duration(_ seconds: TimeInterval) -> String {
         let s = max(0, Int(seconds))
-        if s < 60 { return String(localized: "\(s) giây", bundle: .main) }
+        if s < 60 { return String(localized: "\(s) sec", bundle: .main) }
         let minutes = s / 60
-        if minutes < 60 { return String(localized: "\(minutes) phút", bundle: .main) }
+        if minutes < 60 { return String(localized: "\(minutes) min", bundle: .main) }
         let hours = minutes / 60
-        if hours < 24 { return String(localized: "\(hours) giờ", bundle: .main) }
+        if hours < 24 { return String(localized: "\(hours) h", bundle: .main) }
         let days = hours / 24
         let remainder = hours % 24
-        return remainder == 0 ? String(localized: "\(days) ngày", bundle: .main) : String(localized: "\(days) ngày \(remainder) giờ", bundle: .main)
+        return remainder == 0 ? String(localized: "\(days) d", bundle: .main) : String(localized: "\(days) d \(remainder) h", bundle: .main)
     }
 }

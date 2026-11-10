@@ -9,10 +9,10 @@ final class FormatTests: XCTestCase {
     }
 
     func testDuration() {
-        XCTAssertEqual(Format.duration(30), "30 giây")
-        XCTAssertEqual(Format.duration(40 * 60), "40 phút")
-        XCTAssertEqual(Format.duration(42 * 3600), "1 ngày 18 giờ")
-        XCTAssertEqual(Format.duration(48 * 3600), "2 ngày")
+        XCTAssertEqual(Format.duration(30), "30 sec")
+        XCTAssertEqual(Format.duration(40 * 60), "40 min")
+        XCTAssertEqual(Format.duration(42 * 3600), "1 d 18 h")
+        XCTAssertEqual(Format.duration(48 * 3600), "2 d")
     }
 }
 
@@ -294,7 +294,7 @@ final class HealthScoreTests: XCTestCase {
         let d = HealthScore.compute(makeSnapshot(pressure: .warning, swapGB: 10.8, load5: 82, freeGB: 71), thresholds: Thresholds(),
                                     swapIO: 8 * 1_048_576)
         XCTAssertLessThan(d, 40)
-        XCTAssertEqual(HealthScore.summary(d), "Máy đang quá tải")
+        XCTAssertEqual(HealthScore.summary(d), "Mac is overloaded")
     }
 
     /// A large swap file without swap I/O costs nothing; only swapping in or out lowers the score.

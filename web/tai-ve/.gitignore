@@ -1,2 +1,2 @@
-# Tệp DMG không đưa vào git. Đặt trên máy chủ, xem TRIEN_KHAI.md.
+# DMG files are not kept in git. They live on the server, see TRIEN_KHAI.md.
 *.dmg

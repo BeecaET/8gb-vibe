@@ -1,23 +1,22 @@
-name: Bug report / Báo lỗi
-description: Something does not work as expected. / Có gì đó chạy sai.
+name: Bug report
+description: Something does not work as expected.
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
         Thanks for the report. Security problems: please do not file them here, see SECURITY.md.
-        Cảm ơn bạn. Lỗi bảo mật xin đừng báo ở đây, xem SECURITY.md.
   - type: textarea
     id: what
     attributes:
-      label: What happened? / Chuyện gì xảy ra?
-      description: What you did, what you expected, what you saw. / Bạn làm gì, mong đợi gì, thấy gì.
+      label: What happened?
+      description: What you did, what you expected, what you saw.
     validations:
       required: true
   - type: textarea
     id: steps
     attributes:
-      label: Steps to reproduce / Cách tái hiện
+      label: Steps to reproduce
       placeholder: |
         1.
         2.
@@ -25,14 +24,14 @@ body:
   - type: input
     id: version
     attributes:
-      label: 8GB Vibe version / Phiên bản 8GB Vibe
-      description: From the About page, for example 1.1.0 (build 120). / Xem ở trang Giới thiệu.
+      label: 8GB Vibe version
+      description: From the About page, for example 1.1.0 (build 120).
     validations:
       required: true
   - type: input
     id: mac
     attributes:
-      label: Mac model / Máy Mac
+      label: Mac model
       placeholder: MacBook Air M2 (2022)
     validations:
       required: true
@@ -50,17 +49,17 @@ body:
   - type: input
     id: macos
     attributes:
-      label: macOS version / Phiên bản macOS
+      label: macOS version
       placeholder: macOS 15.6
     validations:
       required: true
   - type: textarea
     id: workload
     attributes:
-      label: What was running? / Đang chạy gì?
-      description: For example 3 Claude Code sessions, Xcode, a Next.js dev server. / Ví dụ 3 phiên Claude Code, Xcode, dev server Next.js.
+      label: What was running?
+      description: For example 3 Claude Code sessions, Xcode, a Next.js dev server.
   - type: textarea
     id: extra
     attributes:
-      label: Screenshots or log / Ảnh chụp hoặc nhật ký
-      description: Optional. The log is at ~/Library/Application Support/8GB Vibe/nhat-ky.jsonl. Remove anything private first. / Tuỳ chọn. Xoá thông tin riêng trước khi gửi.
+      label: Screenshots or log
+      description: Optional. The log is at ~/Library/Application Support/8GB Vibe/nhat-ky.jsonl. Remove anything private first.

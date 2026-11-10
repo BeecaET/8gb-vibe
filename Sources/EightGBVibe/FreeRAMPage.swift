@@ -30,13 +30,13 @@ struct FreeRAMPage: View {
                 .frame(width: 84, height: 84)
                 VStack(alignment: .leading, spacing: 4) {
                     // Nothing selected: show the most that could be freed (secondary color) instead of "0 MB".
-                    Text(selection.isEmpty ? String(localized: "RAM các mục có thể đóng", bundle: .main) : String(localized: "RAM các mục đã chọn (ước tính)", bundle: .main)).font(.callout).foregroundStyle(.secondary)
+                    Text(selection.isEmpty ? String(localized: "Memory held by closable items", bundle: .main) : String(localized: "Selected items’ memory (estimate)", bundle: .main)).font(.callout).foregroundStyle(.secondary)
                     Text(Format.bytes(selection.isEmpty ? freeableTotal : selectedTotal(items)))
                         .font(.system(size: 40, weight: .bold, design: .rounded)).monospacedDigit()
                         .foregroundStyle(selection.isEmpty ? Color.secondary : Color.primary)
                         .motionCount()
                         .animation(.spring(response: 0.35, dampingFraction: 0.9), value: selection)
-                    Text(selection.isEmpty ? String(localized: "Chọn app muốn thoát ở danh sách dưới.", bundle: .main) : String(localized: "Đã chọn \(selection.count) mục", bundle: .main))
+                    Text(selection.isEmpty ? String(localized: "Pick apps to quit from the list below.", bundle: .main) : String(localized: "\(selection.count) selected", bundle: .main))
                         .font(.callout).foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -44,12 +44,12 @@ struct FreeRAMPage: View {
                     Button {
                         monitor.pendingConfirmation = items.filter { selection.contains($0.id) && $0.blockedReason == nil }
                     } label: {
-                        Label("Giải phóng", systemImage: "bolt.fill")
+                        Label("Free Up", systemImage: "bolt.fill")
                     }
                     .buttonStyle(.borderedProminent).controlSize(.large)
                     // Cmd-Delete opens the confirmation sheet (never Return, never quits directly).
                     .keyboardShortcut(.delete, modifiers: .command)
-                    .help("Giải phóng (⌘⌫). Sẽ hỏi lại trước khi thoát.")
+                    .help("Free up (⌘⌫). You will be asked before anything quits.")
                     .disabled(selection.isEmpty)
                     if let h = monitor.system {
                         Text("Swap \(Format.bytes(h.swap.used)) · RAM \(Format.percent(h.memory.usedRatio))")
@@ -73,31 +73,31 @@ struct FreeRAMPage: View {
                 HStack(spacing: 10) {
                     GroupIcon(group: .claude)
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("\(monitor.processes.sessions.count) phiên Claude Code · \(Format.bytes(ram))")
-                        Text("8GB Vibe không tự tắt phiên. Kết thúc phiên tại Terminal hoặc app nơi bạn mở nó.").font(.callout).foregroundStyle(.secondary)
+                        Text("\(monitor.processes.sessions.count) Claude Code sessions · \(Format.bytes(ram))")
+                        Text("8GB Vibe never ends sessions automatically. End a session in the Terminal or app where you started it.").font(.callout).foregroundStyle(.secondary)
                     }
                     Spacer()
-                    Button("Xem các phiên") { monitor.page = .agents }
+                    Button("Review sessions") { monitor.page = .agents }
                 }
                 .padding(10)
                 .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 8))
             }
 
-            SectionTitle("Gợi ý tắt", subtitle: "Ít hoạt động trên \(Format.number(monitor.thresholds.idleMinutes, digits: 0)) phút, từ 200 MB")
+            SectionTitle("Suggested to quit", subtitle: "Low activity for over \(Format.number(monitor.thresholds.idleMinutes, digits: 0)) minutes, at least 200 MB")
             if suggestions.isEmpty {
                 Text(Date().timeIntervalSince(monitor.monitoringStart) < idleAfter
-                     ? String(localized: "Đang theo dõi. Chỉ gợi ý mục ít hoạt động đủ \(Format.number(monitor.thresholds.idleMinutes, digits: 0)) phút và giữ từ 200 MB.", bundle: .main)
-                     : String(localized: "Chưa có mục phù hợp tiêu chí gợi ý. Bạn vẫn có thể xem danh sách dưới.", bundle: .main))
+                     ? String(localized: "Monitoring. Suggestions require at least \(Format.number(monitor.thresholds.idleMinutes, digits: 0)) minutes of low activity and 200 MB of memory.", bundle: .main)
+                     : String(localized: "No items match the suggestion criteria yet. You can still review the list below.", bundle: .main))
                     .font(.callout).foregroundStyle(.secondary)
             } else {
                 table(suggestions)
             }
 
-            SectionTitle("Đang chạy khác")
+            SectionTitle("Other running apps")
             table(other)
 
             if !keptItems.isEmpty {
-                SectionTitle("Đang giữ", subtitle: "Không gợi ý đóng, không chọn sẵn")
+                SectionTitle("Kept", subtitle: "Never suggested, never preselected")
                 VStack(spacing: 0) {
                     ForEach(Array(keptItems.enumerated()), id: \.element.id) { i, u in
                         if i > 0 { Divider().padding(.leading, 50) }
@@ -107,7 +107,7 @@ struct FreeRAMPage: View {
                             Text(u.name)
                             Spacer()
                             Text(Format.bytes(u.footprint)).monospacedDigit().foregroundStyle(.secondary)
-                            Button("Bỏ giữ") { monitor.keep(u.id, false) }.controlSize(.small)
+                            Button("Stop keeping") { monitor.keep(u.id, false) }.controlSize(.small)
                         }
                         .padding(.horizontal, 12).padding(.vertical, 8)
                     }
@@ -116,11 +116,11 @@ struct FreeRAMPage: View {
             }
 
             HStack {
-                Text("App có giao diện nhận lệnh thoát macOS; tiến trình nền nhận tín hiệu dừng. Hãy lưu việc trước khi xác nhận. Kết quả được ghi vào Nhật ký.")
+                Text("GUI apps receive a macOS quit request; background processes receive a stop signal. Save your work before confirming. Results are recorded in the Log.")
                     .font(.callout).foregroundStyle(.secondary)
                 Spacer()
-                Button("Bỏ chọn") { selection.removeAll() }.disabled(selection.isEmpty)
-                Button("Thoát mục đã chọn…") {
+                Button("Deselect") { selection.removeAll() }.disabled(selection.isEmpty)
+                Button("Quit Selected…") {
                     monitor.pendingConfirmation = items.filter { selection.contains($0.id) && $0.blockedReason == nil }
                 }
                 // Same action as the primary button at the top: one primary per screen, so this one is standard.
@@ -176,7 +176,7 @@ struct CandidateRow: View {
             // Items that may not be quit: show a lock instead of a dimmed checkbox.
             if let reason = u.blockedReason {
                 Image(systemName: "lock.fill").font(.callout).foregroundStyle(.tertiary)
-                    .frame(width: 18).help(reason).accessibilityLabel("Không thể thoát")
+                    .frame(width: 18).help(reason).accessibilityLabel("Cannot quit")
             } else {
                 Toggle("", isOn: $selection).labelsHidden().toggleStyle(.checkbox).frame(width: 18)
             }
@@ -189,9 +189,9 @@ struct CandidateRow: View {
             }
             Spacer(minLength: 12)
             if u.blockedReason == nil && hovering {
-                Button { monitor.keep(u.id, true) } label: { Label("Giữ", systemImage: "pin") }
+                Button { monitor.keep(u.id, true) } label: { Label("Keep", systemImage: "pin") }
                     .controlSize(.small)
-                    .help("Giữ mục này: không gợi ý đóng, không chọn sẵn. Bỏ giữ ở cuối trang.")
+                    .help("Keep this: never suggested or preselected. Stop keeping at the bottom of the page.")
             }
             status
             VStack(alignment: .trailing, spacing: 4) {
@@ -214,7 +214,7 @@ struct CandidateRow: View {
         .onHover { hovering = $0 }
         .contextMenu {
             if u.blockedReason == nil {
-                Button("Giữ mục này (không gợi ý đóng)") { monitor.keep(u.id, true) }
+                Button("Keep this (never suggest quitting)") { monitor.keep(u.id, true) }
             }
         }
         .opacity(u.blockedReason == nil ? 1 : 0.65)
@@ -224,14 +224,14 @@ struct CandidateRow: View {
     @ViewBuilder private var status: some View {
         switch monitor.actionStates[u.id] {
         case .quitting:
-            HStack(spacing: 4) { ProgressView().controlSize(.small); Text("Đang thoát").font(.callout) }.foregroundStyle(.secondary)
+            HStack(spacing: 4) { ProgressView().controlSize(.small); Text("Quitting").font(.callout) }.foregroundStyle(.secondary)
         case .quit:
-            StatusPill(owner: "Đã thoát", color: .green)
+            StatusPill(owner: "Closed", color: .green)
         case .notQuit:
-            Button("Buộc thoát…") { monitor.pendingForceQuit = u }.controlSize(.small)
+            Button("Force Quit…") { monitor.pendingForceQuit = u }.controlSize(.small)
         case nil:
             if u.isFrontmost {
-                StatusPill(owner: "Đang dùng", color: .blue)
+                StatusPill(owner: "In use", color: .blue)
             } else {
                 if let statusText = monitor.displayStatus(cpu: u.cpu, lastActive: u.lastActive) {
                     StatusPill(owner: LocalizedStringKey(statusText.0), color: statusText.1)
@@ -248,9 +248,9 @@ struct SlowMacPanel: View {
         HStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.red)
             VStack(alignment: .leading, spacing: 1) {
-                Text("Máy đang chậm").fontWeight(.medium)
+                Text("Mac is slow").fontWeight(.medium)
                 if let h = monitor.system {
-                    Text("Swap \(Format.bytes(h.swap.used)), tải \(Format.number(h.load.m5, digits: 0)) trên \(h.coreCount) nhân. Tắt bớt app rảnh để máy nhẹ lại.")
+                    Text("Swap \(Format.bytes(h.swap.used)), load \(Format.number(h.load.m5, digits: 0)) on \(h.coreCount) cores. Quit idle apps to lighten the load.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
             }
@@ -278,9 +278,9 @@ struct QuitConfirmation: View {
         // Only processes (dev servers, orphans): say "Stop" instead of "Quit".
         let stopping = items.allSatisfy(\.isProcess)
         VStack(alignment: .leading, spacing: 12) {
-            Text(stopping ? "Dừng \(selection.count) mục?" : "Thoát \(selection.count) mục?").font(.headline)
-            Text(stopping ? "Bộ nhớ các mục này đang giữ: khoảng \(Format.bytes(total)) (ước tính). App gửi tín hiệu yêu cầu dừng (SIGTERM); tiến trình có thể chưa dừng."
-                      : "Bộ nhớ các app này đang giữ: khoảng \(Format.bytes(total)) (ước tính). App có thể hỏi lưu trước khi đóng.")
+            Text(stopping ? "Stop \(selection.count) items?" : "Quit \(selection.count) items?").font(.headline)
+            Text(stopping ? "Memory held by these items: about \(Format.bytes(total)) (estimate). A stop request (SIGTERM) is sent; processes may keep running."
+                      : "Memory these apps hold: about \(Format.bytes(total)) (estimate). Apps may ask to save before closing.")
                 .font(.callout).foregroundStyle(.secondary)
             VStack(spacing: 8) {
                 ForEach(items) { u in
@@ -290,7 +290,7 @@ struct QuitConfirmation: View {
                             CandidateIcon(u: u, size: 26)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(u.name)
-                                Text(u.isFrontmost ? String(localized: "Đang dùng. Hãy lưu việc đang làm.", bundle: .main) : u.note)
+                                Text(u.isFrontmost ? String(localized: "In use. Save your work first.", bundle: .main) : u.note)
                                     .font(.callout).foregroundStyle(u.isFrontmost ? Color.orange : Color.secondary)
                             }
                             Spacer()
@@ -304,8 +304,8 @@ struct QuitConfirmation: View {
             }
             HStack {
                 Spacer()
-                Button("Huỷ") { monitor.pendingConfirmation = nil }.keyboardShortcut(.cancelAction)
-                Button(stopping ? "Dừng mục đã chọn" : "Thoát mục đã chọn") {
+                Button("Cancel") { monitor.pendingConfirmation = nil }.keyboardShortcut(.cancelAction)
+                Button(stopping ? "Stop Selected" : "Quit Selected") {
                     let confirmed = items.filter { selection.contains($0.id) && $0.blockedReason == nil }
                     monitor.pendingConfirmation = nil
                     monitor.quitAll(confirmed)
@@ -337,24 +337,24 @@ struct LogPage: View {
             if items.isEmpty {
                 VStack(spacing: 6) {
                     Image(systemName: "clock.arrow.circlepath").font(.largeTitle).foregroundStyle(.tertiary)
-                    Text("Chưa có hành động nào")
-                    Text("Kết quả đóng app, dừng tiến trình và thay đổi kết nối MCP được ghi ở đây.").font(.callout).foregroundStyle(.secondary)
+                    Text("No actions yet")
+                    Text("App quits, process stops and MCP connection changes are recorded here.").font(.callout).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 VStack(spacing: 0) {
                 Table(items) {
-                    TableColumn("Thời điểm") { d in
+                    TableColumn("Time") { d in
                         Text(Self.time(d.timestamp)).monospacedDigit()
                     }.width(96)
-                    TableColumn("Hành động") { d in Text(LocalizedStringKey(d.action)) }.width(90)
-                    TableColumn("Đối tượng") { d in Text(d.target).lineLimit(1) }.width(min: 100, ideal: 100)
-                    TableColumn("RAM (ước tính)") { d in Text(Format.bytes(d.freed)).monospacedDigit() }.width(100)
-                    TableColumn("Kết quả") { d in
-                        // Success outcomes are stored in Vietnamese ("Đã thoát", "Đã dừng"...); anything else is a warning.
+                    TableColumn("Action") { d in Text(LocalizedStringKey(d.action)) }.width(90)
+                    TableColumn("Target") { d in Text(d.target).lineLimit(1) }.width(min: 100, ideal: 100)
+                    TableColumn("RAM (estimate)") { d in Text(Format.bytes(d.freed)).monospacedDigit() }.width(100)
+                    TableColumn("Result") { d in
+                        // Success outcomes in green; anything else is a warning. Old Vietnamese entries are normalized on read.
                         VStack(alignment: .leading, spacing: 2) {
                             Text(LocalizedStringKey(d.outcome))
-                                .foregroundStyle(d.outcome.hasPrefix("Đã") || d.outcome == "Xong" || d.outcome == "Nhả chỗ xong, không dừng tiến trình" ? Color.green : Color.secondary)
+                                .foregroundStyle(ActionLog.successOutcomes.contains(d.outcome) ? Color.green : Color.secondary)
                             if let m = d.measured {
                                 Text("RAM ↓ \(RewardCard.signed(m.ram)) · swap ↓ \(RewardCard.signed(m.swap))")
                                     .font(.callout).foregroundStyle(.secondary)
@@ -365,11 +365,11 @@ struct LogPage: View {
                 .tableStyle(.inset(alternatesRowBackgrounds: false))
                 Divider()
                 HStack {
-                    Text("Tệp nhật ký: \((ActionLog.file.path as NSString).abbreviatingWithTildeInPath)")
+                    Text("Log file: \((ActionLog.file.path as NSString).abbreviatingWithTildeInPath)")
                         .font(.callout).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                         .textSelection(.enabled)
                     Spacer()
-                    Button("Hiện trong Finder") { NSWorkspace.shared.activateFileViewerSelecting([ActionLog.file]) }
+                    Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([ActionLog.file]) }
                         .controlSize(.small)
                 }
                 .padding(.horizontal, 16).padding(.vertical, 10)
@@ -378,7 +378,7 @@ struct LogPage: View {
         }
         .toolbar {
             Button { NSWorkspace.shared.activateFileViewerSelecting([ActionLog.file]) } label: {
-                Label("Hiện tệp nhật ký", systemImage: "doc.text.magnifyingglass")
+                Label("Show log file", systemImage: "doc.text.magnifyingglass")
             }
         }
         .onAppear { items = ActionLog.read() }
@@ -490,8 +490,8 @@ struct BeforeAfterBar: View {
             }
             .frame(height: 12)
             Text(freed == 0
-                 ? String(localized: "RAM đang dùng \(Format.bytes(used)) trên \(Format.bytes(total, digits: 0)). Chọn app để xem kết quả trước khi đóng.", bundle: .main)
-                 : String(localized: "Sau khi đóng: có thể trống thêm tới khoảng \(Format.bytes(freed)) (ước tính). Phần dùng chung với app khác có thể không trả lại.", bundle: .main))
+                 ? String(localized: "Using \(Format.bytes(used)) of \(Format.bytes(total, digits: 0)) RAM. Pick apps to see the result before quitting.", bundle: .main)
+                 : String(localized: "After quitting: up to about \(Format.bytes(freed)) more free (estimated). Memory shared with other apps may not come back.", bundle: .main))
                 .font(.callout).foregroundStyle(.secondary)
         }
         .accessibilityElement(children: .combine)

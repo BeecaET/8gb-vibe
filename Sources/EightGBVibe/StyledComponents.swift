@@ -62,7 +62,7 @@ extension View {
     func collecting(_ isCollecting: Bool) -> some View {
         opacity(isCollecting ? 0.35 : 1)
             .overlay {
-                if isCollecting { Text("Đang thu thập").font(.callout).foregroundStyle(.secondary) }
+                if isCollecting { Text("Collecting").font(.callout).foregroundStyle(.secondary) }
             }
     }
 }
@@ -71,7 +71,7 @@ extension View {
 struct HealthRing: View {
     var score: Int
     var size: CGFloat = 140
-    var label: LocalizedStringKey? = "Điểm sức khoẻ"
+    var label: LocalizedStringKey? = "Health score"
 
     var body: some View {
         let color = Palette.scoreGradient(score)
@@ -94,11 +94,11 @@ struct HealthRing: View {
                 }
             }
         }
-        .help("Số đo ước tính, không phải kiểm tra tốc độ. Điểm dựa trên áp lực bộ nhớ, swap vào ra, tải CPU và ổ trống.")
+        .help("An estimate, not a speed test. The score uses memory pressure, swap I/O, CPU load and free disk space.")
         .frame(width: size, height: size)
         .animation(.spring(response: 0.6, dampingFraction: 0.85), value: score)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Điểm sức khoẻ máy \(score) trên 100")
+        .accessibilityLabel("Health score \(score) out of 100")
     }
 }
 

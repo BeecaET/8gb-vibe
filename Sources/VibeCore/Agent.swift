@@ -36,9 +36,9 @@ public struct AITool: Identifiable, Sendable, Hashable {
 
         public var name: String {
             switch self {
-            case .cli: return String(localized: "Agent dòng lệnh", bundle: .main)
-            case .apps: return String(localized: "App AI", bundle: .main)
-            case .ide: return String(localized: "IDE có AI", bundle: .main)
+            case .cli: return String(localized: "CLI agents", bundle: .main)
+            case .apps: return String(localized: "AI apps", bundle: .main)
+            case .ide: return String(localized: "AI IDEs", bundle: .main)
             }
         }
 
@@ -64,7 +64,7 @@ public enum AIToolBuilder {
     static let aiApps: Set<String> = ["Claude", "ChatGPT", "ChatGPT Classic", "Gemini", "Perplexity", "Copilot",
                                      "Microsoft Copilot", "Grok", "DeepSeek", "Le Chat", "Ollama", "LM Studio"]
     /// Display name of the Claude app's virtual machine row.
-    public static var coworkVMName: String { String(localized: "Claude: máy ảo Cowork", bundle: .main) }
+    public static var coworkVMName: String { String(localized: "Claude: Cowork VM", bundle: .main) }
     /// IDEs and coding apps with AI.
     static let ide: Set<String> = ["Cursor", "Antigravity", "Antigravity IDE", "Windsurf", "Visual Studio Code", "Code",
                                    "Zed", "Codex", "Kiro", "Trae", "Void"]
@@ -94,7 +94,7 @@ public enum AIToolBuilder {
             let embeddedRAM = embedded.reduce(UInt64(0)) { $0 + $1.footprint }
             let embeddedCPU = embedded.reduce(0.0) { $0 + $1.cpu }
             let note = embedded.isEmpty ? nil
-                : String(localized: "Không gồm \(embedded.first?.tool ?? "") (\(Format.bytes(embeddedRAM))), xem ở Agent dòng lệnh.", bundle: .main)
+                : String(localized: "Excludes \(embedded.first?.tool ?? "") (\(Format.bytes(embeddedRAM))), shown under CLI agents.", bundle: .main)
             items.append(AITool(name: name, kind: kind, bundlePath: a.app.bundlePath,
                                footprint: a.footprint > embeddedRAM ? a.footprint - embeddedRAM : 0, cpu: max(0, a.cpu - embeddedCPU),
                                sessions: [], startDate: a.startDate, lastActive: a.lastActive,
@@ -104,7 +104,7 @@ public enum AIToolBuilder {
                 items.append(AITool(name: coworkVMName, kind: .apps, bundlePath: a.app.bundlePath, footprint: vm.footprint,
                                    cpu: vm.cpu, sessions: [], startDate: vm.earliestStart, lastActive: vm.lastActive,
                                    isFrontmost: false,
-                                   note: String(localized: "Máy ảo Cowork của app Claude, đã chạy \(Format.duration(result.timestamp.timeIntervalSince(vm.earliestStart))). Thoát app Claude (Cmd+Q) khi không dùng Cowork để trả RAM.", bundle: .main)))
+                                   note: String(localized: "The Claude app's Cowork virtual machine, running for \(Format.duration(result.timestamp.timeIntervalSince(vm.earliestStart))). Quit the Claude app (Cmd+Q) when you are not using Cowork to give the RAM back.", bundle: .main)))
             }
         }
         return items.sorted { ($0.kind, UInt64.max - $0.footprint) < ($1.kind, UInt64.max - $1.footprint) }

@@ -13,23 +13,23 @@ public enum ProcessGuard {
     /// macOS folders. Except `/System/Applications/` (Mail, Notes...), which the user may quit.
     static let systemDirectories = ["/System/", "/usr/libexec/", "/usr/sbin/", "/sbin/", "/Library/Apple/"]
 
-    static var claudeReason: String { String(localized: "App Claude được bảo vệ để tránh ngắt công việc bên trong. Hãy quản lý phiên tại nơi bạn mở nó.", bundle: .main) }
+    static var claudeReason: String { String(localized: "The Claude app is protected to avoid interrupting work inside it. Manage sessions where you started them.", bundle: .main) }
 
     /// Why it may not be quit. nil means it may be quit.
     public static func reason(pid: Int32, name: String, path: String, isClaudeCode: Bool = false,
                             selfIdentifier: Int32 = getpid()) -> String? {
-        if pid <= 1 { return String(localized: "Tiến trình gốc của macOS.", bundle: .main) }
-        if pid == selfIdentifier { return String(localized: "Chính app này.", bundle: .main) }
+        if pid <= 1 { return String(localized: "A core macOS process.", bundle: .main) }
+        if pid == selfIdentifier { return String(localized: "This app itself.", bundle: .main) }
         let fileName = path.isEmpty ? name : (path as NSString).lastPathComponent
         if fileName == "loginwindow" || name == "loginwindow" {
-            return String(localized: "Dừng loginwindow sẽ đăng xuất. Mọi app mất việc chưa lưu.", bundle: .main)
+            return String(localized: "Stopping loginwindow logs you out. Every app loses unsaved work.", bundle: .main)
         }
         let isSystem = systemDirectories.contains { path.hasPrefix($0) } && !path.contains("/System/Applications/")
         if isSystem || systemNames.contains(fileName) || systemNames.contains(name) {
-            return String(localized: "Một phần của macOS. Dừng có thể làm máy lỗi.", bundle: .main)
+            return String(localized: "Part of macOS. Stopping it can make the Mac misbehave.", bundle: .main)
         }
         if path.contains("/Claude.app/") { return claudeReason }
-        if isClaudeCode { return String(localized: "Phiên Claude Code được bảo vệ. Kết thúc phiên tại Terminal hoặc app nơi bạn mở nó.", bundle: .main) }
+        if isClaudeCode { return String(localized: "This Claude Code session is protected. End it in the Terminal or app where you started it.", bundle: .main) }
         return nil
     }
 

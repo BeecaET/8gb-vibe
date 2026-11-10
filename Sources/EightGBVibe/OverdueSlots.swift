@@ -23,24 +23,24 @@ struct OverdueSlotsView: View {
                     HStack(alignment: .top, spacing: 10) {
                         Image(systemName: "clock.badge.exclamationmark.fill").foregroundStyle(.orange)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("\(s.holder) giữ chỗ \(s.kind) quá 2 giờ").font(.callout.weight(.semibold))
-                            Text("Từ \(Self.time.string(from: s.since)). Việc vẫn chạy: \(s.busyWith.joined(separator: ", ")). App không dừng việc này.")
+                            Text("\(s.holder) has held the \(s.kind) slot for over 2 hours").font(.callout.weight(.semibold))
+                            Text("Since \(Self.time.string(from: s.since)). Still running: \(s.busyWith.joined(separator: ", ")). The app does not stop it.")
                                 .font(.callout).foregroundStyle(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         Spacer()
-                        Button("Nhả chỗ") { confirm = s }
+                        Button("Release slot") { confirm = s }
                     }
                 }
             }
 
-            .confirmationDialog(String(localized: "Nhả chỗ việc nặng?", bundle: .main),
+            .confirmationDialog(String(localized: "Release the heavy-job slot?", bundle: .main),
                                 isPresented: Binding(get: { confirm != nil }, set: { if !$0 { confirm = nil } }),
                                 presenting: confirm) { s in
-                Button("Nhả chỗ") { monitor.releaseOverdue(s) }
-                Button("Huỷ", role: .cancel) {}
+                Button("Release slot") { monitor.releaseOverdue(s) }
+                Button("Cancel", role: .cancel) {}
             } message: { s in
-                Text("Chỉ bỏ lượt giữ chỗ của \(s.holder). Không dừng tiến trình nào; \(s.busyWith.joined(separator: ", ")) vẫn chạy. Agent khác có thể bắt đầu việc nặng sau đó.")
+                Text("Only drops the reservation of \(s.holder). No process is stopped; \(s.busyWith.joined(separator: ", ")) keeps running. Another agent may start a heavy job after this.")
             }
         }
     }

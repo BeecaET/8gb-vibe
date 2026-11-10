@@ -1,6 +1,5 @@
 # Trademarks
 
-English | [Tiếng Việt](#nhãn-hiệu)
 
 The source code of 8GB Vibe is licensed under the [Apache License 2.0](LICENSE). The license covers the code only.
 
@@ -25,18 +24,3 @@ The following are trademarks of BEECA and are **not** licensed under the Apache 
 - Do not suggest that BEECA made, checked or supports your build.
 
 If you are not sure whether a use is fine, open an issue and ask before you ship.
-
----
-
-## Nhãn hiệu
-
-Mã nguồn 8GB Vibe theo [Giấy phép Apache 2.0](LICENSE). Giấy phép chỉ áp dụng cho mã nguồn.
-
-Các mục sau là nhãn hiệu của BEECA, **không** thuộc phạm vi Giấy phép Apache 2.0 (mục 6 của giấy phép không cấp quyền dùng tên thương mại, nhãn hiệu, tên sản phẩm):
-
-- Tên **"8GB Vibe"** và khẩu hiệu "Vibe coding on a budget Mac" khi dùng làm tên sản phẩm.
-- **Icon app 8GB Vibe** (`Resources/AppIcon.icns` và hình vẽ trong `scripts/make-icon.swift`).
-- Tên **BEECA** và **logo BEECA** (`Resources/BeecaLogo.png`).
-- Tên miền **8gb.beeca.vn** và bundle id `vn.beeca.8gbvibe`.
-
-Bản fork phát hành ra ngoài phải đổi tên app, đổi icon, bỏ hoặc thay logo BEECA, dùng bundle id và chữ ký của riêng mình, và không được ngụ ý BEECA làm hay bảo trợ bản đó. Được ghi đúng sự thật "Dựa trên 8GB Vibe của BEECA".

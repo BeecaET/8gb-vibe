@@ -78,13 +78,13 @@ struct MainWindow: View {
                              set: { if $0 == nil { monitor.pendingConfirmation = nil } })) { g in
             QuitConfirmation(items: g.items).environmentObject(monitor)
         }
-        .confirmationDialog("Buộc thoát \(monitor.pendingForceQuit?.name ?? "")?",
+        .confirmationDialog("Force quit \(monitor.pendingForceQuit?.name ?? "")?",
                             isPresented: Binding(get: { monitor.pendingForceQuit != nil }, set: { if !$0 { monitor.pendingForceQuit = nil } }),
                             presenting: monitor.pendingForceQuit) { u in
-            Button("Buộc thoát", role: .destructive) { monitor.forceQuit(u) }
-            Button("Huỷ", role: .cancel) {}
+            Button("Force Quit", role: .destructive) { monitor.forceQuit(u) }
+            Button("Cancel", role: .cancel) {}
         } message: { _ in
-            Text("App chưa tự đóng sau 10 giây. Buộc thoát có thể làm mất dữ liệu chưa lưu.")
+            Text("The app did not quit after 10 seconds. Force quitting may lose unsaved work.")
         }
     }
 }
@@ -127,7 +127,7 @@ extension MainWindow {
                     .lineLimit(1).minimumScaleFactor(0.85)
                 HStack(spacing: 5) {
                     Circle().fill(Palette.forScore(monitor.score)).frame(width: 8, height: 8)
-                    Text("Điểm \(monitor.score)").font(.callout).foregroundStyle(.secondary).monospacedDigit()
+                    Text("Score \(monitor.score)").font(.callout).foregroundStyle(.secondary).monospacedDigit()
                 }
             }
             .accessibilityElement(children: .combine)
@@ -204,9 +204,9 @@ struct OverviewPage: View {
                              subtitle: "\(Format.bytes(h.memory.used)) / \(Format.bytes(h.memory.total, digits: 0))",
                              color: metricColor(.pressure, defaultValue: .blue), data: monitor.history.map { $0.ramRatio * 100 }, ceiling: 100)
                     MetricCard(label: "Swap", symbol: "arrow.left.arrow.right", value: Format.bytes(h.swap.used),
-                             subtitle: "Ngưỡng vàng \(Format.number(monitor.thresholds.swapYellowGB, digits: 0)) GB",
+                             subtitle: "Yellow at \(Format.number(monitor.thresholds.swapYellowGB, digits: 0)) GB",
                              color: metricColor(.swap, defaultValue: .teal), data: monitor.history.map(\.swapGB), thresholds: monitor.thresholds.swapYellowGB)
-                        .help("Swap là bộ nhớ được chuyển tạm ra ổ đĩa. Dung lượng đang dùng khác với tốc độ đọc ghi swap.")
+                        .help("Swap is memory temporarily moved to disk. Space used differs from the rate of swap I/O.")
                     sessionRoomCard
                 }
                 secondaryLine(h)
@@ -223,8 +223,8 @@ struct OverviewPage: View {
         let (value, color): (String, Color) = {
             switch state {
             case .room(let n)?: return (n > 9 ? "~9+" : "~\(n)", n >= 2 ? .green : .orange)
-            case .tight?: return (String(localized: "Sát", bundle: .main), .orange)
-            case .short?: return (String(localized: "Không", bundle: .main), .red)
+            case .tight?: return (String(localized: "Tight", bundle: .main), .orange)
+            case .short?: return (String(localized: "No room", bundle: .main), .red)
             case nil: return ("-", .secondary)
             }
         }()
@@ -232,13 +232,13 @@ struct OverviewPage: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Image(systemName: "sparkles").foregroundStyle(color)
-                    Text("Thêm phiên (ước tính)").foregroundStyle(.secondary)
+                    Text("Extra sessions (estimate)").foregroundStyle(.secondary)
                 }
                 .font(.callout)
                 Text(value).font(.system(size: 24, weight: .semibold, design: .rounded)).foregroundStyle(color)
-                Text("Đang mở \(AIToolBuilder.from(monitor.processes).flatMap(\.sessions).count) phiên agent").font(.callout).foregroundStyle(.secondary).lineLimit(1)
+                Text("\(AIToolBuilder.from(monitor.processes).flatMap(\.sessions).count) agent sessions open").font(.callout).foregroundStyle(.secondary).lineLimit(1)
                 Spacer(minLength: 0)
-                Text("Xem Agent AI ›").font(.callout).foregroundStyle(.secondary)
+                Text("View AI Agents ›").font(.callout).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .contentShape(Rectangle())
@@ -251,19 +251,19 @@ struct OverviewPage: View {
     private func secondaryLine(_ h: SystemSnapshot) -> some View {
         HStack(spacing: 16) {
             Button { monitor.page = .processes } label: {
-                Label("CPU \(Format.number(h.load.m5, digits: 1)) trên \(h.coreCount) nhân", systemImage: "cpu")
+                Label("CPU \(Format.number(h.load.m5, digits: 1)) on \(h.coreCount) cores", systemImage: "cpu")
                     .foregroundStyle(metricColor(.load, defaultValue: .secondary))
             }
             Button { monitor.page = .disk } label: {
-                Label("Ổ trống \(Format.bytes(h.disk.free, digits: 0))", systemImage: "internaldrive")
+                Label("Free disk \(Format.bytes(h.disk.free, digits: 0))", systemImage: "internaldrive")
                     .foregroundStyle(metricColor(.disk, defaultValue: .secondary))
             }
             Spacer()
             // Before the first process scan the timestamp is the reference date: say it is still reading instead of "739,929 days ago".
             if let age = monitor.processesAge {
-                Text("Cập nhật \(Format.duration(age)) trước").foregroundStyle(.secondary)
+                Text("Updated \(Format.duration(age)) ago").foregroundStyle(.secondary)
             } else {
-                Text("Đang đọc tiến trình…").foregroundStyle(.secondary)
+                Text("Reading processes…").foregroundStyle(.secondary)
             }
         }
         .buttonStyle(.plain)
@@ -276,9 +276,9 @@ struct OverviewPage: View {
         let largest = Double(items.first?.footprint ?? 1)
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
-                SectionTitle("Ai đang chiếm RAM", subtitle: nil)
+                SectionTitle("Who is using RAM", subtitle: nil)
                 Spacer()
-                Button("Dọn RAM ›") { monitor.page = .freeRAM }.buttonStyle(.link)
+                Button("Free RAM ›") { monitor.page = .freeRAM }.buttonStyle(.link)
             }
             ForEach(items) { u in
                 HStack(spacing: 10) {
@@ -298,7 +298,7 @@ struct OverviewPage: View {
                     }
                 }
             }
-            if items.isEmpty { Text("Đang đọc…").foregroundStyle(.secondary) }
+            if items.isEmpty { Text("Reading…").foregroundStyle(.secondary) }
         }
         .card()
     }
@@ -306,9 +306,9 @@ struct OverviewPage: View {
     @ViewBuilder
     private func statusChip(_ u: QuitCandidate) -> some View {
         if u.blockedReason != nil {
-            StatusPill(owner: "Bảo vệ", color: .secondary)
+            StatusPill(owner: "Protected", color: .secondary)
         } else if u.isFrontmost {
-            StatusPill(owner: "Đang dùng", color: .blue)
+            StatusPill(owner: "In use", color: .blue)
         } else if let st = monitor.displayStatus(cpu: u.cpu, lastActive: u.lastActive) {
             StatusPill(owner: LocalizedStringKey(st.0), color: st.1)
         }
@@ -331,20 +331,20 @@ struct MemoryPage: View {
             if let h = monitor.system, let budget = monitor.budget {
                 // The budget sits in a card like every other section.
                 VStack(alignment: .leading, spacing: 10) {
-                    SectionTitle("Ngân sách RAM", subtitle: monitor.processesAge.map { "Ước tính. Cập nhật \(Format.duration($0)) trước" } ?? "Ước tính")
+                    SectionTitle("RAM budget", subtitle: monitor.processesAge.map { "Estimate. Updated \(Format.duration($0)) ago" } ?? "Estimate")
                     BudgetBar(budget: budget)
-                    Text("Ước tính tiến trình đọc được và RAM hệ thống giữ: \(Format.bytes(budget.demand)). Máy có \(Format.bytes(budget.totalRAM, digits: 0)). Không gồm mọi tiến trình hệ thống.")
+                    Text("Estimated readable process memory plus wired memory: \(Format.bytes(budget.demand)). This Mac has \(Format.bytes(budget.totalRAM, digits: 0)). Some system processes are not included.")
                         .font(.callout).foregroundStyle(.secondary)
                 }
                 .card()
 
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
-                    StatBox(label: "Đã dùng", value: Format.bytes(h.memory.used), subtitle: "Trên \(Format.bytes(h.memory.total, digits: 0))")
-                    StatBox(label: "Wired", value: Format.bytes(h.memory.wired), subtitle: "Hệ thống giữ")
-                    StatBox(label: "Đã nén", value: Format.bytes(h.memory.compressed), subtitle: "macOS nén để đỡ swap")
+                    StatBox(label: "Used", value: Format.bytes(h.memory.used), subtitle: "Of \(Format.bytes(h.memory.total, digits: 0))")
+                    StatBox(label: "Wired", value: Format.bytes(h.memory.wired), subtitle: "Held by system")
+                    StatBox(label: "Compressed memory", value: Format.bytes(h.memory.compressed), subtitle: "Compressed to avoid swap")
                     StatBox(label: "Swap", value: Format.bytes(h.swap.used),
                             color: (monitor.levels[.swap] ?? .ok) == .ok ? .primary : (monitor.levels[.swap] ?? .ok).color,
-                            subtitle: "Trên ổ đĩa, chậm")
+                            subtitle: "On disk, slow")
                 }
 
                 groupTable
@@ -357,10 +357,10 @@ struct MemoryPage: View {
     private var groupTable: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("Nhóm").frame(maxWidth: .infinity, alignment: .leading)
+                Text("Group").frame(maxWidth: .infinity, alignment: .leading)
                 Text("RAM").frame(width: 80, alignment: .trailing)
                 Text("CPU").frame(width: 60, alignment: .trailing)
-                Text("Trạng thái").frame(width: 130, alignment: .trailing)
+                Text("Status").frame(width: 130, alignment: .trailing)
             }
             .font(.callout).foregroundStyle(.secondary)
             .padding(.horizontal, 10).padding(.vertical, 6)
@@ -389,7 +389,7 @@ struct MemoryPage: View {
                     .font(.callout).foregroundStyle(.secondary).frame(width: 10)
                 GroupIcon(group: n.group, size: 20)
                 Text(n.group.name).fontWeight(.medium)
-                Text("\(n.processCount) tiến trình").font(.callout).foregroundStyle(.secondary)
+                Text("\(n.processCount) processes").font(.callout).foregroundStyle(.secondary)
                 Spacer()
                 Text(Format.bytes(n.footprint)).frame(width: 80, alignment: .trailing)
                 Text(Format.number(n.cpu, digits: 0) + Format.percentSign).frame(width: 60, alignment: .trailing).foregroundStyle(.secondary)
@@ -400,13 +400,13 @@ struct MemoryPage: View {
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 10).padding(.vertical, 7)
-        .accessibilityHint(expanded.contains(n.group) ? String(localized: "Thu gọn", bundle: .main) : String(localized: "Mở rộng", bundle: .main))
+        .accessibilityHint(expanded.contains(n.group) ? String(localized: "Collapse", bundle: .main) : String(localized: "Expand", bundle: .main))
     }
 
     private func itemRow(_ m: ItemUsage) -> some View {
         let isClaudeCode = m.group == .claude && m.name == ItemName.claudeCode
         return HStack(spacing: 8) {
-            Text(isClaudeCode ? String(localized: "\(m.name) · \(monitor.processes.sessions.count) phiên", bundle: .main) : m.name)
+            Text(isClaudeCode ? String(localized: "\(m.name) · \(monitor.processes.sessions.count) sessions", bundle: .main) : m.name)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Text(Format.bytes(m.footprint)).frame(width: 80, alignment: .trailing)
             Text(Format.number(m.cpu, digits: 0) + Format.percentSign).frame(width: 60, alignment: .trailing).foregroundStyle(.secondary)
@@ -422,13 +422,13 @@ struct MemoryPage: View {
         if isClaudeCode {
             let idleCount = monitor.processes.sessions.filter { monitor.isSessionIdle($0) }.count
             if idleCount > 0 {
-                Text("\(idleCount) rảnh").foregroundStyle(.orange)
+                Text("\(idleCount) idle").foregroundStyle(.orange)
             } else {
                 let stillMonitoring = Date().timeIntervalSince(monitor.monitoringStart) < monitor.thresholds.idleMinutes * 60
-                Text(stillMonitoring ? String(localized: "Chờ đủ \(Format.number(monitor.thresholds.idleMinutes, digits: 0)) ph", bundle: .main) : String(localized: "Không có phiên rảnh", bundle: .main)).foregroundStyle(.secondary)
+                Text(stillMonitoring ? String(localized: "Wait \(Format.number(monitor.thresholds.idleMinutes, digits: 0)) min", bundle: .main) : String(localized: "No idle sessions", bundle: .main)).foregroundStyle(.secondary)
             }
         } else if [ItemName.claudeVM, ItemName.dockerVM, ItemName.otherVM].contains(m.name) {
-            Text("Chạy \(Format.duration(Date().timeIntervalSince(m.earliestStart)))").foregroundStyle(.secondary)
+            Text("Running \(Format.duration(Date().timeIntervalSince(m.earliestStart)))").foregroundStyle(.secondary)
         } else {
             if let statusText = monitor.displayStatus(cpu: m.cpu, lastActive: m.lastActive) {
                 Text(statusText.0).foregroundStyle(statusText.1)

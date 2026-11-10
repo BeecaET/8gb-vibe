@@ -10,12 +10,12 @@ public enum Metric: String, CaseIterable, Sendable, Codable {
 
     public var name: String {
         switch self {
-        case .pressure: return String(localized: "Áp lực bộ nhớ", bundle: .main)
+        case .pressure: return String(localized: "Memory pressure", bundle: .main)
         case .swap: return "Swap"
-        case .disk: return String(localized: "Ổ đĩa", bundle: .main)
-        case .load: return String(localized: "Tải CPU", bundle: .main)
-        case .claudeSessions: return String(localized: "Phiên Claude Code", bundle: .main)
-        case .slowMac: return String(localized: "Máy chậm", bundle: .main)
+        case .disk: return String(localized: "Disk", bundle: .main)
+        case .load: return String(localized: "CPU load", bundle: .main)
+        case .claudeSessions: return String(localized: "Claude Code sessions", bundle: .main)
+        case .slowMac: return String(localized: "Slow Mac", bundle: .main)
         }
     }
 }
@@ -35,6 +35,7 @@ public struct Thresholds: Codable, Equatable, Sendable {
     public init() {}
 
     /// Keys stored in UserDefaults by earlier versions. Keep them so saved thresholds still load.
+    /// JSON keys saved by earlier versions (Vietnamese words without accents). Keep them so saved thresholds still load.
     enum CodingKeys: String, CodingKey {
         case swapYellowGB = "swapVangGB", swapRedGB = "swapDoGB"
         case diskFreeYellowGB = "oTrongVangGB", diskFreeRedGB = "oTrongDoGB"

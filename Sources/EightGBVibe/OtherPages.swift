@@ -19,13 +19,13 @@ struct ProcessesPage: View {
             .prefix(400)
         VStack(spacing: 0) {
         Table(Array(items), selection: $selection, sortOrder: $sortOrder) {
-            TableColumn("Tên", value: \.name) { t in
+            TableColumn("Name", value: \.name) { t in
                 HStack(spacing: 6) {
                     GroupIcon(group: t.kind.group, size: 16)
                     Text(t.name).lineLimit(1)
                 }
             }
-            TableColumn("Nhóm", value: \.groupName) { t in Text(t.groupName).foregroundStyle(.secondary).lineLimit(1) }
+            TableColumn("Group", value: \.groupName) { t in Text(t.groupName).foregroundStyle(.secondary).lineLimit(1) }
             TableColumn("RAM", value: \.ramSort) { t in
                 Text(t.footprint.map { Format.bytes($0) } ?? "-").monospacedDigit()
             }.width(75)
@@ -35,8 +35,8 @@ struct ProcessesPage: View {
         .tableStyle(.inset(alternatesRowBackgrounds: false))
         .contextMenu(forSelectionType: ProcessRow.ID.self) { ids in
             let selection = monitor.processes.processes.filter { ids.contains($0.id) && ProcessIdentity(pid: $0.pid, startDate: $0.startDate).canStop() }
-            Button(selection.count == 1 ? String(localized: "Thoát \(selection[0].name)…", bundle: .main)
-                                   : String(localized: "Thoát \(selection.count) tiến trình…", bundle: .main)) {
+            Button(selection.count == 1 ? String(localized: "Quit \(selection[0].name)…", bundle: .main)
+                                   : String(localized: "Quit \(selection.count) processes…", bundle: .main)) {
                 monitor.pendingConfirmation = selection.map { monitor.candidates(from: $0) }
             }
             .disabled(selection.isEmpty)
@@ -49,7 +49,7 @@ struct ProcessesPage: View {
             Divider()
             footer
         }
-        .searchable(text: $searchText, prompt: "Tên, nhóm hoặc PID")
+        .searchable(text: $searchText, prompt: "Name, group or PID")
     }
 
     /// Bottom bar: what is selected, why it cannot be quit, and the quit button. Quitting still goes through the
@@ -60,23 +60,23 @@ struct ProcessesPage: View {
         let ram = stoppable.reduce(UInt64(0)) { $0 + ($1.footprint ?? 0) }
         return HStack(spacing: 12) {
             if picked.isEmpty {
-                Text("Chọn dòng (giữ Cmd để chọn nhiều) hoặc chuột phải để thoát tiến trình của bạn.")
+                Text("Select rows (hold Cmd for several) or right-click to quit your processes.")
                     .foregroundStyle(.secondary)
             } else if stoppable.isEmpty {
-                Label(picked.count == 1 ? (ProcessGuard.reason(picked[0]) ?? String(localized: "Không thể thoát", bundle: .main))
-                                        : String(localized: "Không có tiến trình nào thoát được trong mục đã chọn.", bundle: .main),
+                Label(picked.count == 1 ? (ProcessGuard.reason(picked[0]) ?? String(localized: "Cannot quit", bundle: .main))
+                                        : String(localized: "None of the selected processes can be quit.", bundle: .main),
                       systemImage: "lock.fill")
                     .foregroundStyle(.orange)
             } else {
-                Text("Đã chọn \(stoppable.count) tiến trình · \(Format.bytes(ram))").foregroundStyle(.secondary).monospacedDigit()
+                Text("\(stoppable.count) processes selected · \(Format.bytes(ram))").foregroundStyle(.secondary).monospacedDigit()
                 if stoppable.count < picked.count {
-                    Text("\(picked.count - stoppable.count) mục bị bỏ qua").foregroundStyle(.orange)
+                    Text("\(picked.count - stoppable.count) skipped").foregroundStyle(.orange)
                 }
             }
             Spacer()
-            Button(stoppable.isEmpty ? String(localized: "Thoát…", bundle: .main)
-                   : stoppable.count == 1 ? String(localized: "Thoát \(stoppable[0].name)…", bundle: .main)
-                   : String(localized: "Thoát \(stoppable.count) tiến trình…", bundle: .main)) {
+            Button(stoppable.isEmpty ? String(localized: "Quit…", bundle: .main)
+                   : stoppable.count == 1 ? String(localized: "Quit \(stoppable[0].name)…", bundle: .main)
+                   : String(localized: "Quit \(stoppable.count) processes…", bundle: .main)) {
                 monitor.pendingConfirmation = stoppable.map { monitor.candidates(from: $0) }
             }
             .buttonStyle(.borderedProminent)
@@ -105,24 +105,24 @@ struct DiskPage: View {
                 // The bar shows the used part: accent color when fine, orange or red when nearly full (no green, so it does not read as "good").
                 let diskLevel = monitor.levels[.disk] ?? .ok
                 VStack(alignment: .leading, spacing: 6) {
-                    SectionTitle("Ổ chứa macOS", subtitle: "Trống \(Format.bytes(h.disk.free, digits: 0)) / \(Format.bytes(h.disk.total, digits: 0))")
+                    SectionTitle("macOS volume", subtitle: "Free \(Format.bytes(h.disk.free, digits: 0)) / \(Format.bytes(h.disk.total, digits: 0))")
                     ProgressView(value: h.disk.fullRatio).tint(diskLevel == .ok ? Palette.tint : diskLevel.color)
-                    Text("Đã dùng \(Format.percent(h.disk.fullRatio))").font(.callout).foregroundStyle(.secondary)
+                    Text("\(Format.percent(h.disk.fullRatio)) used").font(.callout).foregroundStyle(.secondary)
                 }
                 .card()
             }
             HStack {
-                Text(monitor.scanningDisk ? String(localized: "Đang quét…", bundle: .main)
-                     : monitor.lastDiskScan.map { String(localized: "Quét lúc \(LogPage.time($0))", bundle: .main) } ?? String(localized: "Chưa quét", bundle: .main))
+                Text(monitor.scanningDisk ? String(localized: "Scanning…", bundle: .main)
+                     : monitor.lastDiskScan.map { String(localized: "Scanned at \(LogPage.time($0))", bundle: .main) } ?? String(localized: "Not scanned", bundle: .main))
                     .font(.callout).foregroundStyle(.secondary)
                 Spacer()
                 if monitor.scanningDisk { ProgressView().controlSize(.small) }
-                Button(monitor.lastDiskScan == nil ? String(localized: "Quét", bundle: .main) : String(localized: "Quét lại", bundle: .main)) { monitor.scanDisk() }.disabled(monitor.scanningDisk)
+                Button(monitor.lastDiskScan == nil ? String(localized: "Scan", bundle: .main) : String(localized: "Rescan", bundle: .main)) { monitor.scanDisk() }.disabled(monitor.scanningDisk)
             }
-            group(.safe, "Cache có thể tạo lại", "Thường tạo lại hoặc tải lại được; lần chạy sau có thể lâu hơn. Nên đóng công cụ liên quan trước khi tự dọn.")
-            group(.review, "Cần xem kỹ", "Có thể chứa dữ liệu còn dùng. Bạn tự quyết.")
-            group(.inApp, "Dữ liệu cần tự xem", "Dọn trong app tương ứng; thư mục Tải về xem bằng Finder.")
-            Text("App chỉ đo dung lượng. Không xoá gì.").font(.callout).foregroundStyle(.secondary)
+            group(.safe, "Recreatable caches", "Usually recreated or downloaded again; the next run may take longer. Close the relevant tool before cleaning manually.")
+            group(.review, "Review carefully", "May hold data still in use. Your call.")
+            group(.inApp, "Data to review manually", "Clean in the relevant app; review Downloads in Finder.")
+            Text("The app only measures size. Nothing is deleted.").font(.callout).foregroundStyle(.secondary)
         }
         .onAppear { if monitor.lastDiskScan == nil { monitor.scanDisk() } }
     }
@@ -131,7 +131,7 @@ struct DiskPage: View {
         let items = monitor.disk.filter { $0.kind == kind }.sorted { ($0.bytes ?? 0) > ($1.bytes ?? 0) }
         let total = items.reduce(UInt64(0)) { $0 + ($1.bytes ?? 0) }
         return VStack(alignment: .leading, spacing: 0) {
-            SectionTitle(name, subtitle: total > 0 ? "Tổng \(Format.bytes(total))" : nil).padding(.bottom, 2)
+            SectionTitle(name, subtitle: total > 0 ? "Total \(Format.bytes(total))" : nil).padding(.bottom, 2)
             Text(summary).font(.callout).foregroundStyle(.secondary).padding(.bottom, 8)
             VStack(spacing: 0) {
                 ForEach(Array(items.enumerated()), id: \.element.id) { i, m in
@@ -142,14 +142,14 @@ struct DiskPage: View {
                             Text(m.note).font(.callout).foregroundStyle(.secondary)
                         }
                         Spacer()
-                        Text(m.bytes.map { Format.bytes($0) } ?? (monitor.scanningDisk ? String(localized: "…", bundle: .main) : String(localized: "Không có hoặc không đọc được", bundle: .main)))
+                        Text(m.bytes.map { Format.bytes($0) } ?? (monitor.scanningDisk ? String(localized: "…", bundle: .main) : String(localized: "Missing or unreadable", bundle: .main)))
                             .monospacedDigit().foregroundStyle((m.bytes ?? 0) < 1 << 20 ? .secondary : .primary)
                         Button {
                             NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: m.path)])
                         } label: { Image(systemName: "magnifyingglass") }
                             .buttonStyle(.borderless)
-                            .help("Hiện trong Finder")
-                            .accessibilityLabel("Hiện \(m.name) trong Finder")
+                            .help("Show in Finder")
+                            .accessibilityLabel("Show \(m.name) in Finder")
                             .disabled(m.bytes == nil)
                     }
                     .padding(.horizontal, 12).padding(.vertical, 8)
@@ -169,11 +169,11 @@ struct BackgroundPage: View {
         PageContainer {
             HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "info.circle").foregroundStyle(.secondary)
-                Text("Các cấu hình LaunchAgent/LaunchDaemon tìm thấy trên máy; không có nghĩa tất cả đang chạy. App chỉ xem. Bạn có thể kiểm tra thêm trong Cài đặt hệ thống > Cài đặt chung > Mục đăng nhập.")
+                Text("LaunchAgent/LaunchDaemon configurations found on this Mac; not all are necessarily running. This app only reads them. You can also check System Settings > General > Login Items.")
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 8)
-                Button("Mở Mục đăng nhập") {
+                Button("Open Login Items") {
                     if let url = URL(string: "x-apple.systempreferences:com.apple.LoginItems-Settings.extension") {
                         NSWorkspace.shared.open(url)
                     }
@@ -183,7 +183,7 @@ struct BackgroundPage: View {
             ForEach([BackgroundItem.Scope.currentUser, .allUsers, .system], id: \.self) { scopeValue in
                 let items = monitor.backgroundItems.filter { $0.scope == scopeValue }
                 if !items.isEmpty {
-                    SectionTitle(LocalizedStringKey(scopeValue.rawValue), subtitle: "\(items.count) mục")
+                    SectionTitle(LocalizedStringKey(scopeValue.rawValue), subtitle: "\(items.count) items")
                     VStack(spacing: 0) {
                         ForEach(Array(items.enumerated()), id: \.element.id) { i, m in
                             if i > 0 { Divider().padding(.leading, 52) }
@@ -245,8 +245,8 @@ struct BackgroundItemRow: View {
                 }
             }
             Spacer(minLength: 8)
-            if m.runAtLoad { StatusPill(owner: "Khi được nạp", color: .secondary) }
-            if m.keepAlive { StatusPill(owner: "Có quy tắc giữ chạy", color: .orange) }
+            if m.runAtLoad { StatusPill(owner: "When loaded", color: .secondary) }
+            if m.keepAlive { StatusPill(owner: "Keep-alive rule", color: .orange) }
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
         .accessibilityElement(children: .combine)
@@ -263,8 +263,8 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     /// Each language's name written in that language; only Automatic is translated.
     @ViewBuilder var label: some View {
         switch self {
-        case .automatic: Text("Tự động (theo máy)")
-        case .vi: Text(verbatim: "Tiếng Việt")
+        case .automatic: Text("Automatic (system)")
+        case .vi: Text(verbatim: "Ti\u{1EBF}ng Vi\u{1EC7}t")  // the language's own name, never translated
         case .en: Text(verbatim: "English")
         }
     }

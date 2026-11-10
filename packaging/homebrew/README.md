@@ -1,8 +1,8 @@
 # Homebrew
 
-`8gb-vibe.rb` is a template cask. It is not published yet. The tap is created only when the repository goes public (after roadmap step 3, see `docs/CHUC_NANG.md` section 3).
+`8gb-vibe.rb` is a template cask. It is not published yet: the tap `BeecaET/homebrew-tap` does not exist yet.
 
-## Create the tap (when going public)
+## Create the tap
 
 1. Create a public repository named `BeecaET/homebrew-tap`. Homebrew needs the `homebrew-` prefix.
 2. Put the cask at `Casks/8gb-vibe.rb` in that repository.
@@ -32,8 +32,3 @@ brew install --cask beecaet/tap/8gb-vibe
 ```
 
 Only notarized DMGs go into the cask. The URL must serve the exact file whose checksum is in the cask.
-
-## Ghi chú tiếng Việt
-
-- Tệp `8gb-vibe.rb` là mẫu, chưa phát hành. Chỉ tạo repo tap `BeecaET/homebrew-tap` (công khai) khi chuyển repo 8GB Vibe sang công khai.
-- Mỗi bản phát hành: tải DMG đã notarize lên `8gb.beeca.vn/tai-ve/`, cập nhật `version` và `sha256` trong cask, chạy `brew audit`.

@@ -261,10 +261,10 @@ public struct DevServer: Identifiable, Sendable, Hashable {
             if let m = directory { return "\(name) (\((m as NSString).lastPathComponent))" }
             return name
         case let .app(name): return name
-        case .backgroundService: return String(localized: "Dịch vụ nền", bundle: .main)
+        case .backgroundService: return String(localized: "Background service", bundle: .main)
         case .orphaned:
-            if let o = origin { return String(localized: "Mồ côi của \(o.sessionDescription)", bundle: .main) }
-            return String(localized: "Mồ côi", bundle: .main)
+            if let o = origin { return String(localized: "Orphaned from \(o.sessionDescription)", bundle: .main) }
+            return String(localized: "Orphaned", bundle: .main)
         }
     }
 }

@@ -48,19 +48,19 @@ struct CommandPalette: View {
         func order(_ p: Page) -> Int { p.shortcut.flatMap { $0.wholeNumberValue }.map { $0 == 0 ? 10 : $0 } ?? 99 }
         let pages = Page.allCases.sorted { order($0) < order($1) }
         for p in pages {
-            list.append(PaletteCommand(id: "page-\(p.rawValue)", title: String(localized: "Đi tới \(p.name)", bundle: .main),
-                                       subtitle: String(localized: "Trang", bundle: .main), symbol: p.symbol,
+            list.append(PaletteCommand(id: "page-\(p.rawValue)", title: String(localized: "Go to \(p.name)", bundle: .main),
+                                       subtitle: String(localized: "Page", bundle: .main), symbol: p.symbol,
                                        keys: p.shortcut.map { "⌘\($0)" }) { monitor.page = p })
         }
-        list.append(PaletteCommand(id: "claude", title: String(localized: "Xem các phiên", bundle: .main),
-                                   subtitle: String(localized: "\(monitor.processes.sessions.count) phiên Claude Code đang mở", bundle: .main),
+        list.append(PaletteCommand(id: "claude", title: String(localized: "Review sessions", bundle: .main),
+                                   subtitle: String(localized: "\(monitor.processes.sessions.count) Claude Code sessions open", bundle: .main),
                                    symbol: "list.bullet", keys: nil) { monitor.page = .agents })
-        list.append(PaletteCommand(id: "scan", title: String(localized: "Quét lại ổ đĩa", bundle: .main),
-                                   subtitle: String(localized: "Đo cache và dữ liệu app", bundle: .main), symbol: "internaldrive", keys: nil) {
+        list.append(PaletteCommand(id: "scan", title: String(localized: "Rescan disk", bundle: .main),
+                                   subtitle: String(localized: "Measure caches and app data", bundle: .main), symbol: "internaldrive", keys: nil) {
             monitor.page = .disk; monitor.scanDisk()
         })
-        list.append(PaletteCommand(id: "log", title: String(localized: "Hiện tệp nhật ký trong Finder", bundle: .main),
-                                   subtitle: String(localized: "Mọi lần thoát app đều được ghi", bundle: .main), symbol: "folder", keys: nil) {
+        list.append(PaletteCommand(id: "log", title: String(localized: "Show log file in Finder", bundle: .main),
+                                   subtitle: String(localized: "Every app quit is recorded", bundle: .main), symbol: "folder", keys: nil) {
             NSWorkspace.shared.activateFileViewerSelecting([ActionLog.file])
         })
         guard !query.isEmpty else { return list }
@@ -68,9 +68,10 @@ struct CommandPalette: View {
         return list.filter { Self.fold($0.title + " " + $0.subtitle).contains(q) }
     }
 
-    /// Case- and accent-insensitive text, so "don ram" finds "Dọn RAM".
+    /// Case- and accent-insensitive text, so "don ram" finds the Vietnamese "Free RAM" title (accents and the
+    /// letter d-with-stroke folded away).
     static func fold(_ s: String) -> String {
-        s.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).replacingOccurrences(of: "đ", with: "d")
+        s.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).replacingOccurrences(of: "\u{0111}", with: "d")
     }
 
     var body: some View {
@@ -78,7 +79,7 @@ struct CommandPalette: View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Tìm trang hoặc lệnh", text: $query)
+                TextField("Find a page or command", text: $query)
                     .textFieldStyle(.plain)
                     .font(.title3)
                     .focused($focused)
@@ -97,7 +98,7 @@ struct CommandPalette: View {
                                 .onTapGesture { selected = i; run(items) }
                         }
                         if items.isEmpty {
-                            Text("Không có lệnh nào khớp").foregroundStyle(.secondary).padding(20)
+                            Text("No matching command").foregroundStyle(.secondary).padding(20)
                         }
                     }
                     .padding(6)
@@ -107,10 +108,10 @@ struct CommandPalette: View {
             }
             Divider()
             HStack(spacing: 14) {
-                Label("chọn", systemImage: "arrow.up.arrow.down")
-                Label("chạy", systemImage: "return")
+                Label("select", systemImage: "arrow.up.arrow.down")
+                Label("run", systemImage: "return")
                 Spacer()
-                Text("Mọi lệnh thoát app vẫn hỏi xác nhận").foregroundStyle(.secondary)
+                Text("Quitting an app always asks first").foregroundStyle(.secondary)
             }
             .font(.callout).foregroundStyle(.secondary)
             .padding(.horizontal, 14).padding(.vertical, 8)

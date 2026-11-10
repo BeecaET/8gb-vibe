@@ -39,21 +39,21 @@ extension Monitor {
     /// 4. the Mac is fine (say how much room is left). Suggests only; every action still goes through confirmation.
     var advice: Advice {
         guard system != nil, processesAge != nil else {
-            return Advice(level: .ok, headline: String(localized: "Đang thu thập số liệu", bundle: .main),
-                          detail: String(localized: "Chờ số đo hệ thống và tiến trình trước khi đánh giá.", bundle: .main), actionTitle: nil, action: .none)
+            return Advice(level: .ok, headline: String(localized: "Collecting readings", bundle: .main),
+                          detail: String(localized: "Waiting for system and process readings before assessing.", bundle: .main), actionTitle: nil, action: .none)
         }
         let level = overallLevel
         if levels[.disk] != .ok, let diskLevel = levels[.disk],
            levels.filter({ $0.key != .disk }).values.allSatisfy({ $0 == .ok }) {
-            return Advice(level: diskLevel, headline: String(localized: "Ổ chứa macOS sắp đầy", bundle: .main),
-                          detail: explanation, actionTitle: String(localized: "Xem dung lượng ổ đĩa", bundle: .main), action: .reviewDisk)
+            return Advice(level: diskLevel, headline: String(localized: "The macOS volume is nearly full", bundle: .main),
+                          detail: explanation, actionTitle: String(localized: "Review disk usage", bundle: .main), action: .reviewDisk)
         }
         let idleApps = suggestions.filter { if case .quitAll = $0.kind { return true }; return false }
         if !idleApps.isEmpty, freeableFromCandidates > 0 {
             return Advice(level: max(level, .warning),
-                          headline: String(localized: "\(idleApps.count) mục ít hoạt động đang giữ khoảng \(Format.bytes(freeableFromCandidates))", bundle: .main),
-                          detail: String(localized: "\(names(idleApps)) ít hoạt động hơn \(Format.number(thresholds.idleMinutes, digits: 0)) phút. Hãy kiểm tra việc đang làm trước khi đóng.", bundle: .main),
-                          actionTitle: String(localized: "Xem và đóng", bundle: .main), action: .freeRAM)
+                          headline: String(localized: "\(idleApps.count) items with low activity hold about \(Format.bytes(freeableFromCandidates))", bundle: .main),
+                          detail: String(localized: "\(names(idleApps)) have shown little activity for over \(Format.number(thresholds.idleMinutes, digits: 0)) minutes. Check ongoing work before quitting.", bundle: .main),
+                          actionTitle: String(localized: "Review and quit", bundle: .main), action: .freeRAM)
         }
         let sessions = processes.sessions
         let old = longRunningSessions
@@ -61,9 +61,9 @@ extension Monitor {
             // Age does not prove a session is finished: say it was opened over a day ago and let the user decide.
             let held = old.reduce(UInt64(0)) { $0 + $1.footprint }
             return Advice(level: max(level, .warning),
-                          headline: String(localized: "\(old.count) phiên Claude Code đã mở hơn 1 ngày", bundle: .main),
-                          detail: String(localized: "Chúng giữ khoảng \(Format.bytes(held)). Mở lâu không có nghĩa là đã xong. Hãy kiểm tra và kết thúc phiên tại nơi bạn mở nó. Đang mở \(sessions.count) phiên; ngưỡng vàng là \(thresholds.sessionsYellow).", bundle: .main),
-                          actionTitle: String(localized: "Xem các phiên", bundle: .main), action: .reviewSessions)
+                          headline: String(localized: "\(old.count) Claude Code sessions open for over a day", bundle: .main),
+                          detail: String(localized: "They hold about \(Format.bytes(held)). Age does not mean the work is finished. Review and end sessions where you started them. \(sessions.count) sessions open; the warning threshold is \(thresholds.sessionsYellow).", bundle: .main),
+                          actionTitle: String(localized: "Review sessions", bundle: .main), action: .reviewSessions)
         }
         if level != .ok {
             // State facts, not a cause: name the sessions and what they hold; "may be related" only when they hold most of the RAM.
@@ -72,32 +72,32 @@ extension Monitor {
             var headline = HealthScore.summary(score)
             var detail = explanation
             if sessions.count >= thresholds.sessionsYellow {
-                headline = String(localized: "Đang mở \(sessions.count) phiên Claude Code, giữ khoảng \(Format.bytes(held))", bundle: .main)
+                headline = String(localized: "\(sessions.count) Claude Code sessions open, holding about \(Format.bytes(held))", bundle: .main)
                 if used > 0, Double(held) > Double(used) * 0.4 {
-                    detail = String(localized: "Có thể liên quan đến việc máy chậm. ", bundle: .main) + explanation
+                    detail = String(localized: "May be related to the slowdown. ", bundle: .main) + explanation
                 }
             }
             return Advice(level: level, headline: headline, detail: detail,
-                          actionTitle: String(localized: "Xem nên đóng gì", bundle: .main), action: .freeRAM)
+                          actionTitle: String(localized: "See what to quit", bundle: .main), action: .freeRAM)
         }
         let roomText: String
         if let b = budget {
             switch SessionHeadroom(budget: b, sessions: AIToolBuilder.from(processes).flatMap(\.sessions)).state {
-            case .room(let n): roomText = String(localized: "Còn chỗ cho khoảng \(n) phiên agent nữa.", bundle: .main)
-            case .tight, .short: roomText = String(localized: "RAM gần đầy, chưa nên mở thêm phiên.", bundle: .main)
+            case .room(let n): roomText = String(localized: "Room for about \(n) more agent sessions.", bundle: .main)
+            case .tight, .short: roomText = String(localized: "RAM is nearly full, better not open more sessions.", bundle: .main)
             }
         } else {
             roomText = ""
         }
-        return Advice(level: .ok, headline: String(localized: "Máy đang ổn", bundle: .main),
+        return Advice(level: .ok, headline: String(localized: "Mac is fine", bundle: .main),
                       detail: roomText, actionTitle: nil, action: .none)
     }
 
-    /// "ChatGPT, WeChat và 1 app khác": names of the first suggested apps.
+    /// "ChatGPT, WeChat and 1 other app": names of the first suggested apps.
     private func names(_ items: [Suggestion]) -> String {
         let list = items.compactMap { g -> String? in if case .quitAll(let u) = g.kind { return u.name }; return nil }
         let shown = list.prefix(2).joined(separator: ", ")
-        return list.count > 2 ? String(localized: "\(shown) và \(list.count - 2) app khác", bundle: .main) : shown
+        return list.count > 2 ? String(localized: "\(shown) and \(list.count - 2) more apps", bundle: .main) : shown
     }
 
     /// Navigates to the relevant page; quitting still needs the confirmation sheet.

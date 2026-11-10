@@ -5,7 +5,7 @@ import VibeCore
 /// Skippable, shown once, reopened from About. Asks for nothing (no notifications, MCP or launch at login).
 struct WelcomeSheet: View {
     @EnvironmentObject var monitor: Monitor
-    static let seenKey = "daChao"
+    static let seenKey = StoredName.welcomeSeen
 
     var body: some View {
         let h = monitor.hardware
@@ -13,26 +13,26 @@ struct WelcomeSheet: View {
             HStack(spacing: 14) {
                 Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 56, height: 56)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Chào mừng đến với 8GB Vibe").font(.title.weight(.bold))
-                    Text("Theo dõi tài nguyên và gợi ý giảm tải khi chạy agent, Xcode, Docker trên Mac.").foregroundStyle(.secondary)
+                    Text("Welcome to 8GB Vibe").font(.title.weight(.bold))
+                    Text("Monitor resources and review ways to reduce load when running agents, Xcode and Docker on a Mac.").foregroundStyle(.secondary)
                 }
             }
             VStack(alignment: .leading, spacing: 14) {
-                item("checkmark.seal.fill", .green, "Đã nhận diện máy",
-                     String(localized: "\(h.modelName), \(h.ramGB) GB RAM. Ngưỡng cảnh báo đã chỉnh theo máy này.", bundle: .main))
-                item("menubar.rectangle", .blue, "Biểu tượng nằm trên thanh menu",
-                     String(localized: "Vòng tròn nhỏ ở góc trên phải màn hình. Máy có tai thỏ (notch) có thể che mất: đóng bớt biểu tượng khác, hoặc giữ phím Cmd rồi kéo để đổi chỗ. Bấm vào vòng tròn, chọn \"Mở 8GB Vibe\" để mở cửa sổ này.", bundle: .main))
-                item("hourglass", .orange, "Đang theo dõi",
-                     String(localized: "App gợi ý những mục ít hoạt động trên \(Format.number(monitor.thresholds.idleMinutes, digits: 0)) phút và giữ từ 200 MB RAM. Có thể chưa có mục phù hợp. Xem trang Bộ nhớ để biết nhóm nào dùng nhiều RAM.", bundle: .main))
-                item("hand.raised.fill", .purple, "Không bắt bật gì thêm",
-                     String(localized: "Thông báo, kết nối agent (MCP) và mở cùng máy đều tuỳ chọn trong Cài đặt. App không tự thoát hay xoá gì; mọi lần đóng app đều hỏi bạn trước.", bundle: .main))
+                item("checkmark.seal.fill", .green, "Mac recognized",
+                     String(localized: "\(h.modelName), \(h.ramGB) GB RAM. Alert thresholds are tuned for this Mac.", bundle: .main))
+                item("menubar.rectangle", .blue, "The icon lives in the menu bar",
+                     String(localized: "A small ring at the top right of the screen. On Macs with a notch it may be hidden: quit some other menu bar items, or hold Cmd and drag to rearrange. Click the ring and choose \"Open 8GB Vibe\" to open this window.", bundle: .main))
+                item("hourglass", .orange, "Monitoring",
+                     String(localized: "Suggestions cover items with low activity for over \(Format.number(monitor.thresholds.idleMinutes, digits: 0)) minutes and at least 200 MB of memory. There may be no matching items yet. The Memory page shows usage by group.", bundle: .main))
+                item("hand.raised.fill", .purple, "Nothing else to turn on",
+                     String(localized: "Notifications, agent connection (MCP) and open at login are all optional in Settings. The app never quits or deletes anything on its own; every quit asks you first.", bundle: .main))
             }
             HStack {
-                Button("Bỏ qua") { finish() }
+                Button("Skip") { finish() }
                     .keyboardShortcut(.cancelAction)
                 Spacer()
-                Button("Xem bộ nhớ ngay") { finish(); monitor.page = .memory }
-                Button("Bắt đầu") { finish() }
+                Button("View Memory now") { finish(); monitor.page = .memory }
+                Button("Get started") { finish() }
                     .buttonStyle(.borderedProminent).controlSize(.large)
             }
         }

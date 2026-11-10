@@ -42,10 +42,10 @@ public enum HealthScore {
 
     public static func summary(_ score: Int) -> String {
         switch score {
-        case 85...: return String(localized: "Máy đang mượt", bundle: .main)
-        case 65..<85: return String(localized: "Máy hơi nặng", bundle: .main)
-        case 40..<65: return String(localized: "Máy đang chậm", bundle: .main)
-        default: return String(localized: "Máy đang quá tải", bundle: .main)
+        case 85...: return String(localized: "Mac is running smoothly", bundle: .main)
+        case 65..<85: return String(localized: "Mac is a bit heavy", bundle: .main)
+        case 40..<65: return String(localized: "Mac is slow", bundle: .main)
+        default: return String(localized: "Mac is overloaded", bundle: .main)
         }
     }
 }

@@ -187,7 +187,7 @@ public struct HardwareStore: Sendable {
 // MARK: Optimization profiles
 
 /// Default settings that depend on the Mac. Values are starting points (estimates), not measurements,
-/// except where noted in docs/CHUC_NANG.md. Anything the user changed in Settings is kept.
+/// except where noted in docs/FEATURES.md. Anything the user changed in Settings is kept.
 public struct OptimizationProfile: Sendable, Equatable {
     public enum Tier: String, Sendable, CaseIterable {
         case gb8, gb16, gb24Plus

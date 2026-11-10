@@ -17,37 +17,37 @@ struct AgentAccessSettings: View {
     var body: some View {
         SettingsSection {
             PickerRow(selection: $monitor.agentPolicy.level) {
-                Text("Chỉ đọc").tag(AgentPolicy.Level.readOnly)
-                Text("Đọc + phối hợp").tag(AgentPolicy.Level.coordinate)
+                Text("Read only").tag(AgentPolicy.Level.readOnly)
+                Text("Read + coordinate").tag(AgentPolicy.Level.coordinate)
                 // Hidden until it does something; shown only if an older version saved it, so the picker stays valid.
                 if monitor.agentPolicy.level == .lowRiskActions {
-                    Text("Tự làm việc rủi ro thấp").tag(AgentPolicy.Level.lowRiskActions)
+                    Text("Low-risk actions").tag(AgentPolicy.Level.lowRiskActions)
                 }
             } label: {
-                FormLabel("Quyền của agent", "Agent đọc trạng thái máy và phối hợp với nhau qua MCP. Không tool nào tắt tiến trình hay xoá tệp.")
+                FormLabel("Agent permissions", "Agents read the Mac's state and coordinate through MCP. No tool quits processes or deletes files.")
             }
             if monitor.agentPolicy.level == .lowRiskActions {
-                Text("Bản này chưa có việc tự làm nào: mức này hiện giống \"Đọc + phối hợp\".")
+                Text("This version has no automatic actions yet: this level works like \"Read + coordinate\".")
                     .font(.callout).foregroundStyle(.secondary)
             }
             // Not built yet: a plain "coming soon" label, not a dimmed switch that looks broken.
             LabeledRow {
-                StatusPill(owner: "Sắp có", color: .secondary)
+                StatusPill(owner: "Coming soon", color: .secondary)
             } label: {
-                FormLabel("Agent tự dừng mồ côi của chính phiên", "Chưa hỗ trợ. Bạn có thể tự chọn dừng tại trang Dev server; app sẽ hỏi xác nhận.")
+                FormLabel("Agents stop their own session's orphans", "Not supported yet. You can choose what to stop on the Dev server page; the app asks for confirmation.")
             }
         } header: {
-            Text("Quyền")
+            Text("Permissions")
         }
         SettingsSection {
             LabeledRow {
                 EmptyView()
             } label: {
-                FormLabel("Đang kết nối", LocalizedStringKey(connectedSummary))
+                FormLabel("Connected", LocalizedStringKey(connectedSummary))
             }
             OverdueSlotsView()
         } header: {
-            Text("Hoạt động")
+            Text("Activity")
         }
         MCPClientsView(server: Self.serverPath)
     }
@@ -56,14 +56,14 @@ struct AgentAccessSettings: View {
         let s = monitor.agentState
         let now = Date()
         let agents = s.agents.filter { now.timeIntervalSince($0.lastSeen) <= AgentHub.agentTimeout }
-        guard !agents.isEmpty else { return String(localized: "Chưa có agent nào đăng ký.", bundle: .main) }
-        var text = String(localized: "\(agents.count) agent", bundle: .main)
+        guard !agents.isEmpty else { return String(localized: "No agent has registered yet.", bundle: .main) }
+        var text = String(localized: "\(agents.count) agents", bundle: .main)
         let slots = s.slots.filter { $0.lease(now: now) == .active }
         for slot in slots {
             let who = agents.first { $0.id == slot.agentID }.map { "\($0.tool) (\($0.project))" } ?? slot.agentID
-            text += String(localized: "; \(who) giữ chỗ \(slot.kind), còn \(Int(slot.expiresAt.timeIntervalSince(now) / 60)) phút", bundle: .main)
+            text += String(localized: "; \(who) holds the \(slot.kind) slot, \(Int(slot.expiresAt.timeIntervalSince(now) / 60)) min left", bundle: .main)
         }
-        if !s.queue.isEmpty { text += String(localized: "; \(s.queue.count) đang chờ", bundle: .main) }
+        if !s.queue.isEmpty { text += String(localized: "; \(s.queue.count) waiting", bundle: .main) }
         return text
     }
 }

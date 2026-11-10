@@ -1,6 +1,5 @@
 # Security policy
 
-English | [Tiếng Việt](#chính-sách-bảo-mật)
 
 ## Supported versions
 
@@ -40,9 +39,3 @@ Out of scope:
 - Reports that need an attacker who already runs code as your user or as root.
 - Builds that are not signed by BEECA.
 - Issues in macOS itself (please report those to Apple).
-
----
-
-## Chính sách bảo mật
-
-Chỉ bản phát hành mới nhất được vá lỗi bảo mật. Vui lòng **không** mở issue công khai cho lỗi bảo mật. Báo riêng qua GitHub: tab **Security** của repo, chọn **Report a vulnerability**. Ghi rõ phiên bản, macOS, máy, RAM, cách tái hiện và tác động. Phạm vi gồm: app tự tắt hay xoá mà không hỏi, dữ liệu rời khỏi máy, tệp của app để lộ cho người dùng khác, lỗi ở bản phát hành đã ký.

@@ -1,8 +1,8 @@
-## What and why / Thay đổi gì, vì sao
+## What and why
 
 <!-- Link the issue: Fixes #... -->
 
-## How it was tested / Đã kiểm tra thế nào
+## How it was tested
 
 - [ ] `swift test -j 2` passes
 - [ ] Tried the app (`./scripts/package.sh`), Mac model and RAM:

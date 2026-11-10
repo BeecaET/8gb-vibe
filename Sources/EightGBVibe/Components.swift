@@ -21,9 +21,9 @@ extension Level {
 
     var status: String {
         switch self {
-        case .ok: return String(localized: "Máy đang ổn", bundle: .main)
-        case .warning: return String(localized: "Bộ nhớ đang căng", bundle: .main)
-        case .critical: return String(localized: "Máy đang quá tải", bundle: .main)
+        case .ok: return String(localized: "Mac is fine", bundle: .main)
+        case .warning: return String(localized: "Memory is tight", bundle: .main)
+        case .critical: return String(localized: "Mac is overloaded", bundle: .main)
         }
     }
 }
@@ -172,16 +172,16 @@ struct BudgetBar: View {
                 Text("0").font(.callout).foregroundStyle(.secondary)
                 Spacer()
                 if budget.overflow > 0 {
-                    Text("Vượt \(Format.bytes(budget.overflow)), phải nén hoặc đẩy xuống swap")
+                    Text("\(Format.bytes(budget.overflow)) over, compressed or swapped")
                         .font(.callout).foregroundStyle(.red)
                 }
                 Spacer()
-                Text("Vạch dọc: RAM máy \(Format.bytes(budget.totalRAM, digits: 0))").font(.callout).foregroundStyle(.secondary)
+                Text("Line: installed RAM \(Format.bytes(budget.totalRAM, digits: 0))").font(.callout).foregroundStyle(.secondary)
             }
             legend.padding(.top, 4)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Các app cần \(Format.bytes(budget.demand)), máy có \(Format.bytes(budget.totalRAM))")
+        .accessibilityLabel("Apps need \(Format.bytes(budget.demand)), this Mac has \(Format.bytes(budget.totalRAM))")
     }
 
     /// Wired uses a dark neutral color, different from the gray of the System group.
@@ -190,7 +190,7 @@ struct BudgetBar: View {
     /// Color legend: wired and the groups in bar order.
     private var legend: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12, alignment: .leading)], alignment: .leading, spacing: 6) {
-            legendItem(Self.wiredColor, String(localized: "Wired (hệ thống giữ)", bundle: .main), budget.wired)
+            legendItem(Self.wiredColor, String(localized: "Wired (held by system)", bundle: .main), budget.wired)
             ForEach(budget.groups.filter { $0.footprint >= 50 << 20 }, id: \.group) { n in
                 legendItem(n.group.color, n.group.name, n.footprint)
             }
