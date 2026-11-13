@@ -30,6 +30,7 @@
 |---|---|---|
 | Menu bar icon | A ring filled by % RAM, colored by pressure, plus swap used | Done |
 | Popover | Health score, RAM, swap, free disk, 1 hour swap chart, apps using the most RAM | Done |
+| Floating bubble | Small panel above other windows: health score ring, RAM %, swap, swap rate while swapping hard, optional agent sessions. Off by default; Settings > Look: when the window is minimized, or always. Click opens the main window, right click hides it. Reuses the Monitor samples | Done (unreleased) |
 | Health score | From 0 to 100, with a sentence explaining why the Mac is slow | Done |
 | Overview | RAM, swap, CPU load and free disk cards with charts; "What is using RAM" with real app icons | Done |
 | RAM budget | Compares what apps need with the Mac's RAM; the excess must be compressed or swapped | Done |

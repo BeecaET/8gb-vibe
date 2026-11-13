@@ -4,7 +4,7 @@ import SwiftUI
 /// Product information, read from Info.plist when running as an .app.
 enum Product {
     static let name = "8GB Vibe"
-    static let summary = String(localized: "A helper for vibe coding on an 8 GB Mac. Watches RAM, swap, CPU and disk, and helps quit apps hogging resources.", bundle: .main)
+    static let summary = String(localized: "Assistant for vibe coding on an 8 GB Mac. Watches RAM, swap, CPU and disk, and suggests what to close; you choose and confirm.", bundle: .main)
     static let tagline = "Vibe coding on a budget Mac"
     /// Download and about page for 8GB Vibe.
     static let website = URL(string: "https://8gb.beeca.vn")!
@@ -59,30 +59,31 @@ struct AboutPage: View {
     @EnvironmentObject var monitor: Monitor
     var body: some View {
         PageContainer {
-            VStack(spacing: 14) {
-                Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 112, height: 112)
-                    .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
-                (Text("8GB").font(.system(size: 34, weight: .heavy, design: .rounded))
-                 + Text(" Vibe").font(.system(size: 30, weight: .regular, design: .rounded)).foregroundColor(.secondary))
-                Text(Product.tagline).font(.callout.italic()).foregroundStyle(.secondary)
-                HStack(spacing: 8) {
-                    Text("Version \(Product.versionString) (build \(Product.buildNumber))")
-                        .font(.callout).foregroundStyle(.secondary)
-                    StatusPill(owner: "100% free", color: .green)
+            // Compact header like a macOS "About" box: icon left, name, version and actions right, in one card.
+            HStack(alignment: .top, spacing: 16) {
+                Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 64, height: 64)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 6) {
+                    (Text("8GB").font(.title2.weight(.heavy)) + Text(" Vibe").font(.title2).foregroundColor(.secondary))
+                        .accessibilityLabel(Text(verbatim: Product.name))
+                    // One line when it fits, two lines in a narrow window.
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: 8) { Text(Product.tagline).italic(); Text(verbatim: "·"); versionLine }
+                        VStack(alignment: .leading, spacing: 4) { Text(Product.tagline).italic(); versionLine }
+                    }
+                    .font(.callout).foregroundStyle(.secondary)
+                    Text(Product.summary).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 8) {
+                        Link(destination: Product.website) { Label("8gb.beeca.vn", systemImage: "arrow.down.circle") }
+                            .buttonStyle(.borderedProminent)
+                        Button { Product.openAboutPanel() } label: { Label("About panel", systemImage: "info.circle") }
+                        Button { monitor.showWelcome = true } label: { Label("Show welcome again", systemImage: "hand.wave") }
+                    }
+                    .padding(.top, 2)
                 }
-                Text(Product.summary)
-                    .font(.title3).multilineTextAlignment(.center).foregroundStyle(.secondary)
-                    .frame(maxWidth: 520)
-                HStack(spacing: 10) {
-                    Link(destination: Product.website) { Label("8gb.beeca.vn", systemImage: "arrow.down.circle") }
-                        .buttonStyle(.borderedProminent)
-                    Button { Product.openAboutPanel() } label: { Label("About panel", systemImage: "info.circle") }
-                    Button { monitor.showWelcome = true } label: { Label("Show welcome again", systemImage: "hand.wave") }
-                }
-                .padding(.top, 4)
+                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
+            .card()
 
             MachineSummaryRow()
 
@@ -140,6 +141,13 @@ struct AboutPage: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 8)
+        }
+    }
+
+    private var versionLine: some View {
+        HStack(spacing: 8) {
+            Text("Version \(Product.versionString) (build \(Product.buildNumber))")
+            StatusPill(owner: "100% free", color: .green)
         }
     }
 

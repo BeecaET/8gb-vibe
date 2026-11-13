@@ -14,6 +14,8 @@ struct SettingsPage: View {
     @AppStorage(AccentChoice.key) private var accent = AccentChoice.emerald.rawValue
     @AppStorage(AppAppearance.key) private var appearance = AppAppearance.system.rawValue
     @AppStorage(StoredName.settingsTab) private var tab = SettingsTab.general.rawValue
+    @AppStorage(StoredName.bubbleMode) private var bubbleMode = BubbleMode.off.rawValue
+    @AppStorage(StoredName.bubbleSessions) private var bubbleSessions = false
     private let launchLanguage = AppLanguage.current
 
     enum SettingsTab: String, CaseIterable, Identifiable {
@@ -43,7 +45,7 @@ struct SettingsPage: View {
             .accessibilityLabel(Text("Settings group"))
             switch SettingsTab(rawValue: tab) ?? .general {
             case .general: general
-            case .look: look; menuBar
+            case .look: look; menuBar; bubble
             case .notifications: notifications
             case .thresholds:
                 thresholds
@@ -132,6 +134,23 @@ struct SettingsPage: View {
             Text("Menu bar")
         } footer: {
             Text("Choose what the menu bar shows.").foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// Floating bubble over other windows. Off by default.
+    private var bubble: some View {
+        SettingsSection("Floating bubble") {
+            PickerRow(selection: $bubbleMode) {
+                ForEach(BubbleMode.allCases, id: \.self) { Text($0.name).tag($0.rawValue) }
+            } label: {
+                FormLabel("Show", "A small bubble above other windows with the health score, RAM and swap. Click it to open the main window; right-click to hide it.")
+            }
+            .onChange(of: bubbleMode) { _ in FloatingBubble.shared.refresh() }
+            ToggleRow(isOn: $bubbleSessions) {
+                FormLabel("Show agent sessions", "Adds the number of open AI agent sessions to the bubble.")
+            }
+            .disabled(bubbleMode == BubbleMode.off.rawValue)
+            .onChange(of: bubbleSessions) { _ in FloatingBubble.shared.refresh() }
         }
     }
 

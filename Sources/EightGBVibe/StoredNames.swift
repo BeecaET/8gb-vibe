@@ -13,6 +13,9 @@ enum StoredName {
     static let menuBarStyle = "kieuThanhMenu"  // what the menu bar shows
     static let sendNotifications = "guiThongBao"
     static let settingsTab = "tabCaiDat"       // last Settings tab
+    static let bubbleMode = "bubbleMode"       // floating bubble: off, whenMinimized, always
+    static let bubbleSessions = "bubbleSessions" // floating bubble shows the agent session count
+    static let bubbleOrigin = "bubbleOrigin"   // floating bubble position, "x,y"
     /// SwiftUI Window id of the main window (macOS saves its frame under it).
     static let mainWindow = "chinh"
     /// Files in ~/Library/Application Support/8GB Vibe.

@@ -173,7 +173,13 @@ struct MenuBarLabel: View {
                 openWindow(id: StoredName.mainWindow)
                 NSApp.activate(ignoringOtherApps: true)
             }
+            // A click on the floating bubble while the main window is closed.
+            .onReceive(NotificationCenter.default.publisher(for: FloatingBubble.openMainWindow)) { _ in
+                openWindow(id: StoredName.mainWindow)
+                NSApp.activate(ignoringOtherApps: true)
+            }
             .task {
+                FloatingBubble.shared.attach(monitor)
                 let args = CommandLine.arguments
                 if let i = args.firstIndex(of: "--window") {
                     if i + 1 < args.count, let t = Page(rawValue: args[i + 1]) { monitor.page = t }
